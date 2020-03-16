@@ -1,0 +1,109 @@
+{% extends "common/page_base.html" %}
+{% block stylesheets %}
+    {{ super() }}
+    <style>
+    
+        .mlv-main-card{
+      		margin-top:0.2rem;
+      		margin-bottom:0.2rem;
+      		height:550px;
+    	}
+    	
+    	.mlv-main-card .form-control{
+    		display:block;
+    		max-width:250px;
+    		margin-bottom:8px;
+    	}
+    	
+    	
+    	.mlv-main-card h5{
+    		display:inline-block;
+    	}
+    	
+    	.mlv-main-card input{
+    		max-width:200px;
+    
+    	}
+    
+    	.tag-card{
+    		max-width:200px;
+    		 box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+        	border-radius: 5px;
+        	display:inline-block;
+        	margin:9px;
+    	}
+    	.tag-card .card-title{
+    		margin-bottom:0px;
+    		padding:3px;
+    		background-color:lightgray;
+    	}
+    	.tag-card .card-body{
+    		padding:4px;
+    	}
+    	.tag-card .table {
+    		border:solid #dee2e6 1px;
+    	}
+    	
+    	.tag-card td{
+    		padding:4px;
+    	}
+     .tag-card-hover:hover {
+      box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+      cursor:pointer
+    }
+    	
+    </style>
+
+{% endblock %}"
+
+{% block outercontent %}
+ {% if current_user.is_authenticated %}
+ <div class ="row">
+ 	<div class = "col col-6">
+   		<div class= "card mlv-main-card">
+      		<div class = "card-header bg-info">
+      			<h5>My Annotation Sets</h5>
+      			<button class ="btn btn-sm btn-secondary" id="refresh-table-buttton">Refresh</button>
+      		</div>
+        	<div id="model-table" class = "card-body"></div>
+    	</div>
+ 	</div>
+ 	<div  class="col col-6">
+		<div class= "card mlv-main-card">
+      		<div class = "card-header bg-info">
+      			<h5>Create Annotation Set</h5>
+      			<button class ="btn btn-sm btn-secondary" id="reset-create-button">Reset</button>
+      		</div>
+        	<div id="create-annotation-container" class = "card-body">
+        	
+        	
+        	</div>
+    	</div>
+ 	</div>
+ </div>
+ {% else %}
+   <div class= 'alert alert-warning'> You need  to
+   		<a  href = "{{url_for('user.login')}}?next={{request.url}}"> log in </a> to create or manage annotations
+   </div>
+
+{% endif %}
+
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/mlv/dataview/ciview.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/dialogs/mlv_controls.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/tables/project_chooser_dialog.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/projects/annotation_set/annotation_set.js')}}?version={{config['JS_VERSION']}}"></script>
+    
+    <script>
+    	$(function(){
+    		var pm = new ProjectManagementTable("model-table","annotation_set");
+    		var cm = new UploadAnnotationSet("create-annotation-container",pm)
+    	})
+    </script>
+    
+{% endblock %}

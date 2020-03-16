@@ -1,0 +1,86 @@
+{% extends "common/page_base.html" %}
+
+
+
+
+
+{% block outercontent %}
+<h2>{{config['MLV_PROJECTS'][project_type]['label']}}</h2>
+
+	{% if current_user.is_authenticated or config['MLV_PROJECTS'][project_type]['anonymous_creation']%}
+	<div class='mlv-form-holder'>
+	
+		<div class="mlv-form">
+		    {% if config['MLV_PROJECTS'][project_type]['anonymous_creation'] and not current_user.is_authenticated%}
+	    	
+		    <div class= "row alert alert-warning">
+		    	You are currently not logged in. The project you create will be anonymous and will be
+		    	accessible to any one who knows the url. It will be deleted after 2 weeks. Please
+		    	enter your email so you can be informed when the project is complete.
+		    	If you want a permanant private project which you can later share or make public please log in.
+		    </div>
+		     <div class="row">
+		    	
+		    	<div class="form-group col-sm-6">
+						<label class="control-label">Email:</label> 
+						<input class="form-control mlv-file-input required" id="user-email" />
+						
+				</div>
+		    
+		    </div>
+	    
+	    
+	    	{% endif %}
+		
+			<h5> Enter name and description to start</h5>
+        	<div class="row">
+        		<div class="form-group col-sm-6">
+          			<label class="control-label" for="project-name">Name:</label>
+          			<input class="form-control mlv-file-input required" id="project-name" />
+        		</div>
+        		<div class="form-group col-sm-6">
+          			<label class="control-label" for="project-description">Description:</label>
+          			<textarea class="form-control required form-control-md" id="project-description" rows="2" name="ps-job-description"></textarea>
+        		</div>
+        	</div>
+        	{% if config['MLV_PROJECTS'][project_type]['enter_genome'] %}
+        		<div class="row">
+					<div class="form-group col-sm-3">
+						<label class="control-label">Genome:</label> 
+						<select class="form-control form-control-md" id="genome-select">
+							<option value="">--Select--</option> 
+							{% for genome in genomes %}
+								<option value="{{genome['name']}}">{{genome['label']}}</option> 
+							{%endfor %}
+						</select>
+					</div>
+				</div>
+        	{% endif %}
+        	<div class ="row">
+        	<div class ="col mx-auto text-center">
+                	<span id="submit-button"  class="btn btn-primary btn-sm">Create</span>
+             </div>
+            </div>
+     	</div>
+     	</div>
+     	<div id="warning-holder"></div>
+	{% else %}
+		<div class="alert alert-warning" role="alert">
+			You need to be logged in to create the project - you can log in 
+	        <a href= "{{url_for('user.login')}}?next={{request.url}}">here</a>
+	    </div> 
+	{% endif %} 
+	{% block project_explanation %}
+	{% endblock %}              
+{% endblock %}
+
+
+	
+	
+
+
+
+{% block scripts %}
+    {{ super() }}  
+    <script src="{{ url_for('static', filename='js/mlv/projects/create_project.js') }}"></script>
+{% endblock %}

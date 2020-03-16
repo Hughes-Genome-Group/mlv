@@ -1,0 +1,32 @@
+{% extends "common/page_base.html" %}
+
+
+{% block outercontent %}
+	<h4>Project Types</h4>
+	<div  id = "create-projects-deck" class="row container-fluid"></div>
+	<h4>Available Projects</h4>
+	<div  id = "my-projects-deck"  class="row container-fluid"></div>
+	
+
+	
+
+		
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+     <script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+     <script>
+        $(document).ready(function() {
+        	var vars = {};
+            var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi,    
+            function(m,key,value) {
+              vars[key] = value;
+            });
+            new ProjectCreatePanel("create-projects-deck")
+        	new ProjectCardDeck("my-projects-deck",vars);
+        	
+		});
+     </script>
+{% endblock %}

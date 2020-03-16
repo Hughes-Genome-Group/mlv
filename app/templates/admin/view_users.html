@@ -1,0 +1,53 @@
+{% extends "common/page_base.html" %}
+
+{% block stylesheets %}
+    {{super()}}
+   
+    <link rel="stylesheet" href="{{ url_for('static' , filename='css/main/json-viewer.css') }}" />
+     <link rel="stylesheet" href="{{ url_for('static' , filename='css/main/split.css') }}" />
+
+      <style>
+      		.dc-chart g.row text{
+      			fill:black;	
+      		}
+      </style>
+{% endblock %}
+
+{% block outercontent %}
+	<div class="split-container">
+    	<div id="left-panel" class="split split-horizontal">
+        	<div id="filter-panel" style="overflow:hidden" class="split split-vertical"></div>
+        	<div id="json-view" style= "overflow-y:auto;word-wrap:break-word" class="split split-vertical"></div>
+    	</div> 
+    	<div id="mlv-table" class="grid split split-horizontal"></div>
+	</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+	<script src="{{ url_for('static', filename='js/main/split.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/main/json-viewer.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/dataview/ciview.js')}}?version={{config['JS_VERSION']}}"></script>
+ 	<script src="{{ url_for('static', filename='js/mlv/jobs/users_admin_panel.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script>
+		
+		$(function(){
+	    	Split(['#left-panel', '#mlv-table'], {
+	    		sizes: [40, 60],
+	    		direction:"horizontal",
+	    		gutterSize:5,
+	    		onDragEnd:function(){$(window).trigger("resize")}
+			});
+	    	
+	 		Split(['#filter-panel', '#json-view'], {
+	    		sizes: [30, 70],
+	    		direction:"vertical",
+	    		gutterSize:5,
+	    		onDragEnd:function(){$(window).trigger("resize")}
+			});
+	 		
+			new UsersAdminPanel("mlv-table","filter-panel","json-view");
+			
+		});	
+	</script>
+{% endblock %}

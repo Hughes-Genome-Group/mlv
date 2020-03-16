@@ -1,0 +1,19 @@
+{	
+	"jobs":[
+		{"name":"test_job"},
+		{"name":"blast_job"}
+	],
+	"projects":[{
+        "name":"test_project",
+        "label":"Test Project",
+        "icon":"img/icons/peak_models_icon.png",
+        "large_icon":"/static/img/icons/capture_compare.png",
+        "is_public":false,
+        "main_project":true,
+        "can_create":true,
+        "enter_genome":true,
+        "new":true
+    }
+    ]	
+
+}

@@ -1,0 +1,8 @@
+{%extends "email/message_base.html" %}
+{% block content %}
+
+All the images have been created from your project. They can acccessed here:-
+{{url}}
+They can also be uploaded to Zegami if required.
+
+{% endblock %}

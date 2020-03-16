@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<!--[if IE 8]> <html lang="en" class="ie8"> <![endif]-->
+<!--[if IE 9]> <html lang="en" class="ie9"> <![endif]-->
+<!--[if !IE]><!--> <html lang="en"> <!--<![endif]-->
+
+ <!-- BEGIN HEAD -->
+<head>
+   
+     <meta charset="UTF-8" />
+    <title>{%block title %} {% endblock%}</title>
+     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="" name="description" />
+    <meta content="" name="author" />
+     <!--[if IE]>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <![endif]-->
+    <!-- GLOBAL STYLES -->
+    <!-- GLOBAL STYLES -->
+    {% block stylesheets %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-4.10/css/bootstrap.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main/main.css')}}?version={{config['JS_VERSION']}}" />
+	 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
+	 <link rel="stylesheet" href="{{ url_for('static', filename='css/main/cookiealert.css') }}" />
+	  <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui-bootstrap/jquery-ui-1.10.3.custom.css') }}?version={{config['JS_VERSION']}}" />
+    
+    
+    <!--END GLOBAL STYLES -->
+
+    {% endblock %}
+</head>
+     <!-- END HEAD -->
+
+     <!-- BEGIN BODY -->
+<body >
+
+     <!-- MAIN WRAPPER -->
+   
+    
+
+    <!-- HEADER SECTION -->
+    <div class="alert alert-dismissible text-center cookiealert" role="alert">
+
+  <div class="cookiealert-container">
+
+   By continuing to use this website, you consent to the use of cookeies, which are used to ensure you get the best experience.  
+
+ 
+
+    <button type="button" class="btn btn-primary btn-sm acceptcookies" aria-label="Close">
+
+        I agree
+
+    </button>
+
+  </div>
+
+</div>
+      
+       <div class="container-fluid">
+
+            <nav class="navbar navbar-expand-lg fixed-top navbar-light bg-light"  >
+            	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    			<span class="navbar-toggler-icon"></span>
+    			</button>
+    			
+                <!--<a data-original-title="Show/Hide Menu" data-placement="bottom" data-tooltip="tooltip" class="accordion-toggle btn btn-primary btn-sm visible-xs" data-toggle="collapse" href="#menu" id="menu-toggle">
+                    <i class="icon-align-justify"></i>
+                </a>-->
+                <!-- LOGO SECTION -->
+                <div class="navbar-header">
+
+                    <a href="/" class="navbar-brand">
+                    <img src="{{config['APPLICATION_LOGO']}}" />
+                       <span class="navbar-header h4">{{config['APPLICATION_NAME']}}</span>
+                       </a>
+             
+                   
+                </div>
+                <div class=" collapse navbar-collapse" id="main-navbar">
+             {% if project_type %} 
+          
+             <p  class='nav navbar-header h6'>{{config['MLV_PROJECTS'][project_type]['label']}}</p>
+             
+             {% endif %}
+             
+              {% if project_name %} 
+          
+             <p  style="margin-left:5px" class='nav navbar-header h6'>{{project_name}}</p>
+             
+             {% endif %}
+
+                <!-- END LOGO SECTION -->
+                <ul class="nav navbar-nav ml-auto">
+              
+                {% if current_user.is_authenticated %}
+                 <li class="nav-link dropdown">
+                        <a class="dropdown" data-toggle="dropdown" href="#">
+                   
+                            <i class="fas fa-question "></i>&nbsp; <i class="caret"></i>
+                            Help
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-user">
+                         
+                            <li><a href="javascript:new SendHelpMessageDialog()"><i class="fas fa-envelope"></i> Send Question</a>
+                            </li>
+                            <!--<li><a href="{{help_page}}"><i class="fab fa-internet-explorer"></i> Help Page </a>
+                            </li>-->
+                        </ul>
+
+                    </li>
+                	
+                    <li class=" nav-link dropdown">
+                        <a class="dropdown" data-toggle="dropdown" href="#">
+                        <i class="fa fa-user "></i>
+                        {{current_user.first_name}}
+                         
+                           &nbsp; <i class="caret"></i>
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-user">
+                         
+                            <li><a href="{{url_for('user.change_password')}}"><i class="fa fa-key"></i> <span>Change Password</span> </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li><a href="{{url_for('user.logout')}}"><i class="fas fa-sign-out-alt"></i> <span>Logout</span> </a>
+                            </li>
+                        </ul>
+
+                    </li>
+                   
+      				 <li class="nav-item">
+        				<a class="nav-link" href="/jobs/my_jobs">
+        				My Jobs
+            				<span id ="my-jobs-number-failed" class="badge badge-danger"></span>
+            				<span id ="my-jobs-number-running" class="badge badge-success"></span>
+          					
+        				</a>
+      				</li>
+      			
+                  
+ 
+                {% else %}
+                <li class= 'nav-item'>
+                    <a  class="nav-link" href = "{{url_for('user.login')}}?next={{request.url}}">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Log In</a>
+                </li>
+                <li class= 'nav-item'>
+                    <a class ="nav-link" href = "{{url_for('user.register')}}?next={{request.url}}">
+                    <i class="fas fa-file-signature"></i>
+                    Register</a>
+                </li>
+                {% endif %}
+                   <li class="nav-item">
+                  {% if current_user.is_authenticated %}
+        				<a class="nav-link" href="/projects?perms=mine">
+        				My Projects
+        				<span id ="my-projects-number" class="badge badge-info"></span>
+        			{% else %}
+        				<a class="nav-link" href="/projects">
+        				Projects
+        			
+        			{% endif %}
+        				</a>
+      				</li>
+        				 {% if current_user.administrator %}
+        				   <li class=" nav-link dropdown">
+                        <a class="dropdown" data-toggle="dropdown" href="#">
+                      
+                        	Admin  <i class="fas fa-wrench"></i>
+                         
+                           &nbsp; <i class="caret"></i>
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-user">
+                         
+                            <li><a href="/jobs/jobs_panel"><i class="fas fa-tasks"></i> <span>All Jobs</span> </a>
+                            </li>
+                           
+                            <li><a href="/admin/users_panel"><i class="fas fa-users"></i> <span>Users</span> </a>
+                            </li>
+                        </ul>
+
+                    </li>
+                   
+      				
+      			
+      				 
+      				 {% endif %}
+            				
+          					
+        			
+
+                  
+                    <!--ADMIN SETTINGS SECTIONS -->
+
+                  
+                    <!--END ADMIN SETTINGS -->
+                </ul>
+            </div>
+
+            </nav>
+            
+        </div>
+       
+        
+        <!-- END HEADER SECTION -->
+ 
+
+
+      
+       
+
+        <!--PAGE CONTENT -->
+        <div id="container" class="container-fluid">
+       	
+        
+        <div style="width:100%">
+        {% include "common/flash.html" %}
+        {% block outercontent %}
+        
+       
+      
+            
+            
+          
+            {% block content %}
+          
+            {% endblock %}
+              
+            </div>
+           
+            
+        {% endblock %}
+        </div>
+     
+      
+        
+
+
+
+      
+       <!--END PAGE CONTENT -->
+
+
+    
+
+     <!--END MAIN WRAPPER -->
+
+   <!-- FOOTER
+    <div id="footer" style="vertical-align:text-top;">
+        <p >&copy;  binarytheme &nbsp;2014 &nbsp;</p>
+        
+    </div>
+     -->
+    <!--END FOOTER -->
+     <!-- GLOBAL SCRIPTS -->
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/jquery/jquery.min.js') }}?version={{config['JS_VERSION']}}"></script>
+    
+   <script>
+    //$.widget.bridge('uitooltip', $.ui.tooltip);
+    //$.widget.bridge('uibutton', $.ui.button);
+    </script>
+    <script src="{{ url_for('static', filename='bootstrap-4.10/js/popper.min.js') }}"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>-->
+    <script src="{{ url_for('static', filename='bootstrap-4.10/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main/jquery_custom.js') }}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/main/cookiealert.js')}}?version={{config['JS_VERSION']}}"></script>
+    
+    
+       
+    <script>
+        jQuery.fn.bstooltip = jQuery.fn.tooltip;
+        function __update_jobs_projects(){
+        	$.ajax({
+        		url:"/general/get_jobs_projects",
+        		dataType:"json"
+        	}).done(function(data){
+        		$("#my-projects-number").text(data.projects);
+        		if (data.jobs.failed==0){
+        			$("#my-jobs-number-failed").hide();
+        		}
+        		else{
+        			$("#my-jobs-number-failed").show().text(data.jobs.failed);
+        		}
+        		if (data.jobs.running==0){
+        			$("#my-jobs-number-running").hide();
+        		}
+        		else{
+        			$("#my-jobs-number-running").show().text(data.jobs.running);
+        		}
+        		
+        	})
+        	
+        }
+        
+        $(function(){
+        	__update_jobs_projects();
+        })
+        
+        
+      
+    </script>
+     <script src="{{ url_for('static', filename='js/jquery/jquery-ui.min.js') }}"></script>
+     <!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-137590116-1"></script>
+	<script>
+  		window.dataLayer = window.dataLayer || [];
+  		function gtag(){dataLayer.push(arguments);}
+  			gtag('js', new Date());
+
+  		gtag('config', 'UA-137590116-1');
+	</script>
+     
+    
+    
+   
+    {% endblock %}
+       
+</body>
+     <!-- END BODY -->
+</html>

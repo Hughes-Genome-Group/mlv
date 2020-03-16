@@ -1,0 +1,15 @@
+{
+	"projects":[
+		{
+			"name":"multi_locus_view",
+	        "label":"Multi Locus View",
+	        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+	        "can_create":true,
+	        "is_public":true,
+	        "main_project":true,
+	        "enter_genome":true,
+	        "description":"Upload bed like file of genomic locations and metadata. Allows sorting and filtering and visualization of the data."  
+    
+		}
+	]
+}

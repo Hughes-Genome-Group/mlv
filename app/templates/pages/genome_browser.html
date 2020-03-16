@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--[if IE 8]> <html lang="en" class="ie8"> <![endif]-->
+<!--[if IE 9]> <html lang="en" class="ie9"> <![endif]-->
+<!--[if !IE]><!--> <html lang="en"> <!--<![endif]-->
+
+
+<head>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui-bootstrap/jquery-ui-1.10.3.custom.css') }}" />
+<style>
+html,body{
+	height:100%;
+	margin:0px;
+
+}
+
+</style>
+  
+</head>
+
+ 
+<body >
+
+     <div id="track-div" style="height:100%;width:100%"></div>
+     
+     
+     <script src="{{ url_for('static', filename='js/jquery/jquery.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/jquery/jquery-ui.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/mlv/tracks/MLVPanel_custom.js')}}?version={{config['JS_VERSION']}}"></script>
+    
+     
+     
+     <script>
+     	var project_id= {{project_id}};
+     	var view_id= {{view_id}};
+     
+     	$(function(){
+     	
+     		
+     		
+     		$.ajax({
+     			url:"/meths/get_track_details/"+project_id+"/"+view_id,
+     			dataType:"json"
+     			
+     		}).done(function(data){
+     			let p = new MLVPanel(data.tracks,{
+     				div:"track-div",
+     				fixed_height_mode:true,
+     				allow_user_zoom:true,
+     				allow_user_drag:true
+     			});
+     			p.addRulerTrack();
+     			p.update(data.position.chr,data.position.start,data.position.end)
+     			
+     		});
+     	})
+     
+     </script>
+     
+     
+  
+</body>
+
+
+</html>
+    
+

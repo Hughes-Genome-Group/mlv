@@ -1,0 +1,7 @@
+{%extends "email/message_base.html" %}
+{% block content %}
+
+A Zegami collection has been created and all the images uploaded. You can view the collection here:-
+{{url}}
+
+{% endblock %}

@@ -1,0 +1,5 @@
+{%extends "email/message_base.html" %}
+{% block content %}
+Your {{type}} job has finished and can be viewed at the following url:
+{{url}}
+{% endblock %}

@@ -1,0 +1,4 @@
+{%extends "email/message_base.html" %}
+{% block content %}
+This is a test email {{info}}
+{% endblock %}

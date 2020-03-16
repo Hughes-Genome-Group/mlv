@@ -1,0 +1,6 @@
+Dear {{firstname}} {{lastname}}
+
+{% block content %}
+{% endblock %}
+
+{{config["MAIL_DEFAULT_SENDER"]}}

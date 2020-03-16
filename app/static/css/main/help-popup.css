@@ -1,0 +1,56 @@
+        .popover-close{
+        	position:absolute;
+        	top:3px;
+        	right:3px;
+        	font-size:10px;
+        	cursor:pointer;
+        
+        }
+          .popover {
+  background-color:#E0EEEE; /*substitute 'red' with your color of choice*/
+}
+ .bs-popover-right .arrow:after{
+ 
+ 	border-right-color:  #E0EEEE;
+
+ }
+ 
+  .bs-popover-top .arrow:after{
+ 
+ 	border-top-color:  #E0EEEE;
+
+ }
+ 
+  .bs-popover-top .arrow:before{
+
+ 		border-top-color:black;
+ }
+ 
+ 
+ .bs-popover-bottom .arrow:after{
+ 
+ 	border-bottom-color:  #E0EEEE;
+
+ }
+ 
+  .bs-popover-bottom .arrow:before{
+
+ 		border-bottom-color:black;
+ }
+ 
+ 
+ 
+ .bs-popover-left .arrow:before{
+
+ 		border-left-color:black;
+ }
+ 
+ .bs-popover-left .arrow:after{
+ 
+ 	border-left-color:#E0EEEE;
+ }
+ 
+
+.popover-content {
+  background-color: #E0EEEE;
+} 
