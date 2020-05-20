@@ -2,7 +2,7 @@
 
 Multi Locus View (MLV) is a web based tool for analysing and visualising Next Generation Sequencing data sets.
 By allowing intuitive filtering and visualisation of multiple genomic locations, it allows the user to quickly drill
-down and annotate regions of interest.
+down and annotate regions of interest. A Public version can be accessed [here](https://mlv.molbiol.ox.ac.uk)
 
 ## Documentation
 
