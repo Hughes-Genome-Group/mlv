@@ -2,7 +2,7 @@ from app import databases,app
 from app.databases.main_database import get_where_clause
 from pathlib import Path
 from time import sleep
-import json,os,csv,gzip,ujson,shutil,sys,subprocess
+import json,os,csv,gzip,ujson,shutil,sys,subprocess,math
 from _csv import reader
 from app.ngs.gene import get_genes_in_view_set,GeneSet
 from app.zegami.zegamiupload import get_tags,update_collection,create_new_set,delete_collection
@@ -171,7 +171,7 @@ class ViewSet(object):
         databases[self.db].update_table_with_dicts(update_list,self.table_name)
         shutil.rmtree(folder)
         
-    def cluster_by_fields(self,fields,name,methods=["UMAP"]):
+    def cluster_by_fields(self,fields,name,methods=["UMAP"],dimensions=2):
         import numpy,umap
         from sklearn.manifold import TSNE
         for field in fields:
@@ -184,8 +184,12 @@ class ViewSet(object):
         o= open(data_file,"w")
       
         for res in results:
+            if not res[fields[0]]:
+                res[fields[0]]="0"
             o.write(str(res[fields[0]]))
             for field in fields[1:]:
+                if not res[field]:
+                    res[field]="0"
                 o.write("\t"+str(res[field]))
             o.write("\n")
         o.close()
@@ -195,16 +199,16 @@ class ViewSet(object):
         
         for method in methods:
             if method=="UMAP":
-                reducer=umap.UMAP()
+                reducer=umap.UMAP(n_components=dimensions)
                 result = reducer.fit_transform(data)
             elif method=="tSNE":
-                result = TSNE(n_components=2).fit_transform(data)
+                result = TSNE(n_components=dimensions).fit_transform(data)
             
             columns=[]
             labels=[]
-            for index in range(1,3):
+            for index in range(1,dimensions+1):
                 label = "{}{}_{}".format(method,index,name)
-                columns.append({"label":label,"datatype":"double","columnGroup":name})
+                columns.append({"label":label,"datatype":"double","columnGroup":method+" "+name})
                 labels.append(label)
                 
             columns[0]["master_group_column"]=True
@@ -214,7 +218,10 @@ class ViewSet(object):
                 field_order.append(l_to_f[label])
             update_list=[]
             for rid,row in enumerate(result,start=1):
-                update_list.append({"id":rid,field_order[0]:float(row[0]),field_order[1]:float(row[1])})
+                d ={"id":rid}
+                for n in range(0,dimensions):
+                    d[field_order[n]]=float(row[n])
+                update_list.append(d)
             
             databases[self.db].update_table_with_dicts(update_list,self.table_name)
             self.refresh_data()
@@ -223,7 +230,7 @@ class ViewSet(object):
                 info={}
                 self.data["field_information"]["cluster_by_fields"]=info
             
-            info[name]=field_order
+            info[method+" "+name]=field_order
             self.update()
             return_info.append({"fields":field_order,"labels":labels,"method":method})
         
@@ -370,19 +377,33 @@ class ViewSet(object):
         fields=[]
         tracks=[]
         wigs=[]
+        is_fields=0
         for aid in ids:
             i =self.data["annotation_information"][str(aid)]
-            columns.append({
-                "name":i["label"],
-                "field":i["field"],
-                "datatype":"text",
-                "id":"annotation_{}".format(aid),
-                "filterable":True,
-                "sortable":True
-            })
+            if isinstance(i,list):
+                is_fields=aid
+                for item in i:
+                    item["name"]=item["label"]
+                    item["id"]=item["field"]
+                    item["filterable"]=True
+                    item["sortable"]=True
+                    columns.append(item)
+                    fields.append(item["field"])
+            else:  
+                columns.append({
+                    "name":i["label"],
+                    "field":i["field"],
+                    "datatype":"text",
+                    "id":"annotation_{}".format(aid),
+                    "filterable":True,
+                    "sortable":True
+                })
+                fields.append(i["field"])
+            p=get_project(aid)
+              
             tracks.append({
                 "url":"/tracks/projects/{}/anno_{}.bed.gz".format(aid,aid),
-                "short_label":i["label"],
+                "short_label":p.name,
                 "featureHeight":12,
                 "height":15,
                 "color":"#5F9EA0",
@@ -392,22 +413,85 @@ class ViewSet(object):
                 "decode_function":"generic"
                 
             })
-            fields.append(i["field"])
-            if i.get("type") and i["type"]!="annotation_set":
-                p=get_project(aid)
-                wig = p.get_main_wig_track()
-                if wig:
-                    wigs.append(wig)
+            
+           
+            
+            wig = p.get_main_wig_track()
+            
+            if wig:
+                wig["allow_user_remove"]=True
+                wigs.append(wig)
+            
         sql= "SELECT id,{} FROM {}".format(",".join(fields),self.table_name)
         res= databases[self.db].execute_query(sql)
         return {
             "columns":columns,
             "data":res,
             "tracks":tracks,
-            "wigs":wigs
+            "wigs":wigs,
+            "is_fields":is_fields
         }
             
-              
+    def add_annotation_fields(self,id,extra_columns):
+        from app.ngs.project import get_project
+        p=get_project(id)
+       
+        is_anno= p.type=="annotation_set"
+          
+        fields = p.get_fields()
+        f_d={}
+        ef_to_index={}
+        columns=[]
+        for f in fields:
+            f_d[f["field"]]=f 
+        for ec in extra_columns:
+            d= f_d[ec]
+            columns.append({"label":p.name+" "+d["name"],"datatype":d["datatype"],"columnGroup":p.name+" Annotations"})
+        columns[0]["master_group_column"]=True      
+        name_to_field=self.add_columns(columns)
+        annotation_information=self.data.get("annotation_information")
+        if not annotation_information:
+            annotation_information={}
+            self.data["annotation_information"]=annotation_information
+       
+        for f in extra_columns:
+            if is_anno:
+                ef_to_index[name_to_field[p.name+" "+f_d[f]["name"]]]=f_d[f]["position"]+6
+            else:
+                ef_to_index[name_to_field[p.name+" "+f_d[f]["name"]]]=f
+                
+        for c in columns:
+            c["field"]=name_to_field[c["label"]]
+        
+        self.data["annotation_information"][p.id]=columns
+        self.update()
+                
+        if not is_anno:
+            vs = ViewSet(p.db,p.get_viewset_id())
+            sql = "SELECT {} FROM {} WHERE id =%s".format(",".join(extra_columns),vs.table_name)
+        
+        bed=self.get_bed_file()
+        command = "bedtools intersect -wa -wb -a {} -b {}".format(bed,p.data["bed_file"])
+        update_list=[]
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,shell=True)
+        
+        for line in iter(process.stdout.readline,b''):
+            arr=line.decode().strip().split("\t")
+            update_dict= {"id":int(arr[3])}
+            if is_anno:
+                for f in ef_to_index:
+                    update_dict[f]=arr[ef_to_index[f]]
+                    
+            else:
+                res= databases[p.db].execute_query(sql,(arr[7],))
+                for f in ef_to_index:
+                    update_dict[f]=res[0][ef_to_index[f]]
+            update_list.append(update_dict)
+        
+        databases[self.db].update_table_with_dicts(update_list,self.table_name)
+                
+                    
+                
   
     def add_annotations_intersect(self,ids):
         sql= "SELECT id,type,name,data->>'bed_file' AS bed FROM projects WHERE id = ANY(%s)"
@@ -418,13 +502,16 @@ class ViewSet(object):
         for row in results:
             files.append(row['bed'])
             columns.append({"label":row['name'],"datatype":"text","columnGroup":"Annotations"})
+      
+           
+                   
         name_to_field=self.add_columns(columns,"Annotations")
         
+     
         annotation_information=self.data.get("annotation_information")
         if not annotation_information:
             annotation_information={}
             self.data["annotation_information"]=annotation_information
-        
         for index,row in enumerate(results,start=1):
             #delete prevoius column
             field = annotation_information.get(str(row['id']))
@@ -526,6 +613,21 @@ class ViewSet(object):
                 res=v1*v2
             elif operator=="-":
                 res=v1-v2
+            elif operator =="rel":
+                res= (v1-v2)
+                if v1==0:
+                    res=res/0.01
+                else:
+                    res=res/v1
+            elif operator=="log_change":
+                if v2 ==0:
+                    v2=0.01
+                res = v1/v2
+                if res>0:
+                    res= math.log2(res)
+                    
+                
+                
             else:
                 res=v1+v2
             

@@ -4,6 +4,7 @@ from app.jobs.jobs import get_all_jobs,get_job
 import requests,ujson
 from flask_login import current_user
 from flask import request
+from app import databases
 
      
 @meths.route("/get_job_status/<id>",methods=['GET'])
@@ -19,14 +20,25 @@ def get_job_status(id):
 def get_jobs():
     my_jobs=request.args.get("my_jobs")
     user=None
-    if my_jobs:
+    if not my_jobs:
+        if not current_user.administrator:
+            return ujson.dumps({"succes":False,"msg":"You do not have permission"})
+    else:        
         user=current_user.id
-    if not my_jobs and not current_user.administrator:
-        return ujson.dumps({"succes":False,"msg":"You do not have permission"})
     
     return ujson.dumps(get_all_jobs(user))
 
 
+
+@meths.route("/jobs/get_all_stats",methods=['GET'])
+def get_stats():
+    tables = ["projects","jobs","users"]
+    stats={}
+    for t in tables:
+        sql = "SELECT COUNT(*) AS num FROM {}".format(t)
+        res= databases["system"].execute_query(sql)
+        stats[t]=res[0]["num"]
+    return ujson.dumps(stats)
 
 @meths.route("/jobs/get_job_info/<int:job_id>",methods=['GET'])
 def get_job_info(job_id):

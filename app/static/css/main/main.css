@@ -78,7 +78,10 @@
 }
 
 
-
+.mlv-menu-icon{
+	margin-right:3px;
+	font-size:18px;
+}
 
 .mlv-menu .fas,.far{
 	cursor:pointer;

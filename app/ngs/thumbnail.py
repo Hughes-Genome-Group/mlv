@@ -1,6 +1,5 @@
 from app.ngs.view import ViewSet
 from app.ngs.utils import get_temporary_folder
-from app.ngs.annotation import get_annotations_in_view_set,get_all_annotations,get_all_annotation_sets
 from app import app,db,databases
 from app.ngs.gene import get_genes,get_genes_in_view_set
 from app.ngs.track import add_track_details

@@ -14,6 +14,11 @@ def get_tracks(genome):
 @logged_in_required_method
 def validate_track_url():
     url = request.form.get("url")
+    multi = request.form.get("multi")
+    if multi:
+        urls =  url.split(",")
+        for u in url:
+            r=validate_track_file_uscs
     result= validate_track_file_ucsc(url,50)
     return ujson.dumps(result)
 

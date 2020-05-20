@@ -11,7 +11,6 @@ from app.ngs.utils import get_temporary_folder,save_file
 from app.ngs.view import ViewSet
 import os
 from app.zegami.zegamiupload import get_tags
-from _sqlite3 import complete_statement
 
 
 #******************************************
@@ -34,6 +33,16 @@ def get_project_data(id):
         "status":p.status,
         "id":p.id
     })
+ 
+@meths.route("/get_project_fields/<int:id>")
+def get_project_fields(id): 
+    p = get_project(id)
+    perm = p.get_permissions(current_user)
+    if not perm:
+         return ujson.dumps({"success":False,"msg":"You do not have permission"})
+
+    return ujson.dumps(p.get_fields())
+ 
  
 
 @meths.route("/execute_project_action/<int:project_id>",methods=["POST"])

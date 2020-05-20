@@ -7,24 +7,13 @@ from pathlib import Path
 from sqlalchemy import text
 from app.jobs.jobs import get_job
 from app.databases.user_models import UserJob
-from app.jobs.jobs import get_all_jobs,delete_job
-from app.jobs.celery_tasks import upload_to_zegami_after_tsne
+from app.jobs.jobs import get_all_jobs,delete_job,job_types
 from app.ngs.project import get_project
 from app.ngs.view import ViewSet
 from app import databases,db
 from app.databases.user_models import User
 
 app=create_app(os.getenv("FLASK_CONFIG"),min_db_connections=0)
-
-
-
-@app.cli.command()
-@click.option("--param1")
-@click.option("--param2")
-def test_celery(param1="default",param2="default"):
-    print(param1)
-    print(param2)
-
 
 
 @app.cli.command()
@@ -141,10 +130,11 @@ def test_email():
 
 @app.cli.command()
 def check_all_jobs():
-    jobs=db.session.query(UserJob).filter(UserJob.status.notin_(['complete','failed'])).all()
+    types = job_types.keys()
+    jobs=db.session.query(UserJob).filter(UserJob.status.notin_(['complete','failed','processing']),UserJob.type.in_(types)).all()
     for j in jobs:
         try:
-            job = get_job(job=j)
+            job = get_job(j.id)
             job.check_status()
         except Exception as e:
             app.logger.exception("Unable to process job #{}".format(j.id))

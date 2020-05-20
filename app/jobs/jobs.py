@@ -149,7 +149,12 @@ class AnnotationIntersectionJob(LocalJob):
                     p.create_anno_bed_file()
             p= get_project(self.job.inputs["project_id"])
             vs = ViewSet(self.job.genome,p.get_viewset_id())
-            vs.add_annotations_intersect(self.job.inputs["ids"])
+            ec = self.job.inputs.get("extra_columns")
+            ids= self.job.inputs["ids"]
+            if ec:
+                vs.add_annotation_fields(ids[0],ec)
+            else:
+                vs.add_annotations_intersect(ids)
             self.complete()
         except Exception as e:
             app.logger.exception("Cannot process AnnotationIntersectionJob # {}".format(self.job.id))
@@ -190,14 +195,15 @@ class ClusterByFieldsJob(LocalJob):
             vs = ViewSet(p.db,p.get_viewset_id())
             try:
                 name = self.job.inputs["name"]
-                info = vs.cluster_by_fields(self.job.inputs["fields"],name,self.job.inputs["methods"])
+                dimensions = self.job.inputs.get("dimensions",2)
+                info = vs.cluster_by_fields(self.job.inputs["fields"],name,self.job.inputs["methods"],dimensions=dimensions)
                 p.refresh_data()
                 for cols in info:
                     p.data["graph_config"].append({
                             "type":"wgl_scatter_plot",
                             "title":name + " " + cols["method"],
                             "param":[cols["fields"][0],cols["fields"][1]],
-                            "id":name,
+                            "id":name+"_"+cols["method"],
                             "axis":{
                                 "x_label":cols["labels"][0],
                                 "y_label":cols["labels"][1]
@@ -210,6 +216,23 @@ class ClusterByFieldsJob(LocalJob):
                             }
                         
                         })
+                fields = self.job.inputs["fields"]
+                field_names=[]
+                for f in fields:
+                    field_names.append(vs.fields[f]["label"])
+                p.data["graph_config"].append({
+                    "type":"average_bar_chart",
+                    "title":name+" Fields",
+                    "param":fields,
+                    "labels":field_names,
+                    "id":name+"_fields",
+                    "location":{
+                        "x":0,
+                        "y":0,
+                        "height":2,
+                        "width":4
+                    }
+                })
                 p.data["cluster_by_fields_job_status"]="complete"
                 p.update()          
                 self.complete()
@@ -231,7 +254,7 @@ class FindTSSDistancesJob(LocalJob):
         try:
             p =get_project(self.job.inputs["project_id"])
             vs =ViewSet(p.db,p.get_viewset_id())
-            vs.add_ts_starts(overlap_column=True)
+            vs.add_ts_starts(overlap_column=True,go_levels=self.job.inputs.get("go_levels",0))
             p.set_data("find_tss_distances_job_status","complete")
             self.complete()
             
@@ -357,66 +380,7 @@ class CreateZegamiCollectionJob(LocalJob):
             
             
             
-class GreatOntologyJob(LocalJob):
-    def __init__(self,job=None,inputs=None,user_id=0,genome="other"):
-        if (job):
-            super().__init__(job=job)
-        else:   
-            super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="great_ontology_job")
-    
-    def process(self):
-        import ujson
-        if not self.job.genome in ["hg19","hg38","mm10","mm9"]:
-            raise Exception("Genome not supported")
-        p= get_project(self.job.inputs["project_id"])
-        tf= p.get_tracks_folder()
-        vs = ViewSet(p.db,p.get_viewset_id())
-        bed = vs.get_bed_file()
-        '''
-        tn = os.path.join(tf,"temp.bed.gz")
-        shutil.copy(bed,tn)
-        bed_url= "http://{}/tracks/projects/{}/temp.bed.gz".format(app.config["HOST_NAME"],p.id)
-        
-        params={
-            "requestSpecies":p.db,
-            "requestName":p.name,
-            "requestSender":"MLV",
-            "outputType":"batch",
-            "requestURL":bed_url
-        }
-        response = requests.get("http://bejerano.stanford.edu/great/public/cgi-bin/greatStart.php",params=params)
-        f= get_temporary_folder()
-        self.set_output_parameter("results_folder",f)
-        op = os.path.join(f,"results.txt")
-        o = open(op,"w")
-        o.write(response.text)
-        o.close()
-        '''
-        results = {}
-        a = ujson.loads(open("/home/sergeant/mlv_dev/node/mf.json").read())
-        with open("/data/mlv/temp/faYNVuHIE0fbhAyIOOYM/results.txt") as f:
-            for line in f:
-                arr = line.split("\t")
-                if arr[0] =="GO Molecular Function":
-                    prob = float(arr[5])
-                    if prob>100:
-                        continue
-                    ids = arr[22].split(",")
-                    for vid in ids:
-                        vid = int(vid)
-                        info = results.get(vid)
-                        if not info:
-                            info={1:"",2:"",3:"",4:"",5:""}
-                            results[vid]=info
-                        go_info= a.get(arr[1])
-                        if go_info:
-                            l = go_info["level"]
-                            if l<6 and l>0:
-                                if not info[l]:
-                                    info[l]=go_info["name"]
-                                else:
-                                    info[l]+=(","+go_info["name"])
-        print(results[2347])           
+
         
         
         
@@ -424,7 +388,7 @@ class GreatOntologyJob(LocalJob):
          
     
     
-job_types["great_ontology_job"]=GreatOntologyJob     
+  
 job_types["annotation_intersection_job"]=AnnotationIntersectionJob
 job_types["ucsc_images_job"]=UCSCImagesJob
 job_types["mlv_images_job"]=MLVImagesJob
@@ -436,7 +400,7 @@ job_types["cluster_by_fields_job"]=ClusterByFieldsJob
 def get_all_jobs(user=None):
     extra=""
     types = list(job_types.keys())
-    if user:
+    if user or user==0:
         extra = "AND jobs.user_id={}".format(user)
     sql= ("SELECT jobs.id as id,to_char(sent_on, 'YYYY-MM-DD HH24:MI:SS') as sent_on , "
           "to_char(finished_on, 'YYYY-MM-DD HH24:MI:SS') as finished_on, CONCAT(first_name,' ',last_name) "

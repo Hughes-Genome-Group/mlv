@@ -19,7 +19,7 @@
     {% block stylesheets %}
     <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-4.10/css/bootstrap.min.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main/main.css')}}?version={{config['JS_VERSION']}}" />
-	 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
+	 <link rel="stylesheet" href="{{ url_for('static', filename='font-awesome/css/all.css')}}?version={{config['JS_VERSION']}}">
 	 <link rel="stylesheet" href="{{ url_for('static', filename='css/main/cookiealert.css') }}" />
 	  <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui-bootstrap/jquery-ui-1.10.3.custom.css') }}?version={{config['JS_VERSION']}}" />
     

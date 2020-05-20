@@ -1,5 +1,5 @@
 from . import main
-from flask import Blueprint, redirect, render_template,request,safe_join,send_from_directory
+from flask import Blueprint, redirect, render_template,request,safe_join,send_from_directory,request,Response
 from flask import request, url_for,flash
 from flask_user import current_user, login_required, roles_accepted
 from app import db,app,databases
@@ -9,7 +9,7 @@ from app.ngs.project import GenericObject,get_project,get_main_project_types
 from app.ngs.genome import get_genomes
 from flask_cors import cross_origin
 
-import ujson
+import ujson,sys,re,mimetypes
 
 
 #***********GENERAL PAGES**********************
@@ -28,6 +28,9 @@ def project_home_page(project_type):
                            genomes=get_genomes(not_allow_other))
 
 
+#********************************************************************
+#***The follwoinf should be overiddeb by directives in the webserver
+#*********************************************************************
 
 '''calls to static module files are rerouted
 to the module's static folder - can do this at the server level 
@@ -39,9 +42,52 @@ location ~  /(.*)/static/(.*) {
 def test_url(project,path):
    f= safe_join("modules",project,"static",path)
    return send_from_directory(app.root_path,f)
+
+
+@main.route("data/temp/<path:path>")
+def temp_url(path):
+    return send_from_directory(app.config["TEMP_FOLDER"],path)
    
-   
- 
+@main.route("data/<path:path>")
+def image_route(path):
+    if path.endswith(".png"):
+        return send_from_directory(app.config["DATA_FOLDER"],path)
+
+@main.route("tracks/<path:path>")
+def send_track(path):
+    file_name =safe_join(app.config["TRACKS_FOLDER"],path)
+    range_header = request.headers.get('Range', None)
+    file =open(file_name,"rb")
+    if not range_header:
+        return send_file(file)
+    
+
+    size = sys.getsizeof(file)
+    byte1, byte2 = 0, None
+
+    m = re.search('(\d+)-(\d*)', range_header)
+    g = m.groups()
+
+    if g[0]:
+        byte1 = int(g[0])
+    if g[1]:
+        byte2 = int(g[1])
+
+    length = size - byte1
+    if byte2 is not None:
+        length = byte2 - byte1 + 1
+
+    file.seek(byte1)
+    data = file.read(length)
+
+    rv = Response(data,
+                  206,
+                  mimetype=mimetypes.guess_type(file_name)[0],
+                  direct_passthrough=True)
+    rv.headers.add('Content-Range', 'bytes {0}-{1}/{2}'.format(byte1, byte1 + length - 1, size))
+    rv.headers.add('Accept-Ranges', 'bytes')
+    file.close()
+    return rv
 
 
     

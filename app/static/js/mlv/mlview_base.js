@@ -164,6 +164,9 @@ class MLViewBase{
 			});
 		this.browser.addToMenu(op);
 		this.browser.addToMenu(sel);
+		this.browser.panel.addListener("track_removed",function(c){
+			self._saveState();
+		})
 		
 		
     
@@ -996,6 +999,7 @@ class MLViewBase{
 				this.filter_panel.removeField(f);
 			}
 		}
+		this._saveState();
 	}
 	
 	
@@ -1107,7 +1111,9 @@ class MLViewBase{
     	}
     	let t_cols = this.table.grid.getColumns();
     	for (let col of data.columns){
-    		col.columnGroup="Annotations"
+    		if (!col.columnGroup){
+    			col.columnGroup="Annotations"
+    		}
     		t_cols.push(col);
     		this.columns.push(col)
     	}
@@ -1123,18 +1129,20 @@ class MLViewBase{
     	this.table.updateGroupPanel();
     	this.filter_panel.setColumns(this.columns);
     	//to do - add graphs / tracks
-    	for (let col of data.columns){
-    		this.filter_panel.addChart({
-    			type:"ring_chart",
-    			param:col.field,
-    			title:col.name,
-    			id:"anno_pie_"+col.id,
-    			location:{x:0,y:0,height:3,width:3}
-    		});
-    		this.annotations[col.id.split("_")[1]]={
-    			field:col.field,
-    			label:col.name
-    		}
+    	if (data.is_fields==0){
+	    	for (let col of data.columns){
+	    		this.filter_panel.addChart({
+	    			type:"ring_chart",
+	    			param:col.field,
+	    			title:col.name,
+	    			id:"anno_pie_"+col.id,
+	    			location:{x:0,y:0,height:3,width:3}
+	    		});
+	    		this.annotations[col.id.split("_")[1]]={
+	    			field:col.field,
+	    			label:col.name
+	    		}
+	    	}
     	}
     	for (let track of data.tracks){
     		this.main_panel.addTrack(track,0)
@@ -1203,12 +1211,43 @@ class MLViewBase{
     
     findTSSDistances(){
     	let self = this;
-    	new MLVDialog("The distance from each region to the nearest tss site will be calculated",{
+    	let div =$("<div>");
+    	div.append("<div>The distance from each region to the nearest tss site will be calculated</div>");
+    	$("<input>").attr({
+    		type:"checkbox",
+    		id:"tss-GO-annotations"
+    		
+    	}).css("border-right","3px").appendTo(div);
+    	$("<label>").attr({
+			"for":"tss-GO-annotations"
+			}).text("Include GO annoations").appendTo(div);
+    	div.append("<br>");
+    	$("<label>").attr({
+			"for":"tss-GO-levels"
+			}).text("GO Hierarchical Levels").css("border-right","3px").appendTo(div);
+    	let sel = $("<select>").attr("id","tss-GO-levels").appendTo(div);
+    	for (let n=1;n<6;n++){
+    	  sel.append($('<option>',{
+			  value:n,
+			  text:n
+		  }));
+    	}
+    	sel.val("3")
+    	
+    	
+    	
+    	new MLVDialog(div,{
     		mode:"ok_cancel",
+    		title:"Find TSS distances",
     		close_on_ok:true,
     		callback:function(do_action){
     			if (do_action){
-    				self.sendAction("find_tss_distances",{}).done(function(resp){
+    				let go_levels=0;
+    				if ($("#tss-GO-annotations").prop("checked")){
+    					go_levels=parseInt(sel.val());
+    				}
+    				
+    				self.sendAction("find_tss_distances",{go_levels:go_levels}).done(function(resp){
     					if (resp.success){
     						let wd=new WaitingDialog("Finding TSS Distances");
     						wd.wait("")

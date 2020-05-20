@@ -181,7 +181,11 @@ class ProjectCardDeck{
 	        	if (more){
 	        		$("html").scrollTop(5000);	
 	        	}
-	      });		
+	        	if (self.config.data_loaded){
+	        		self.config.data_loaded();
+	        	}
+	      });
+		
 	}
 	
 	
@@ -207,7 +211,7 @@ class ProjectCardDeck{
 		let self = this;
 		let g= this;
 		let card = $("<div id ='mlv-card-"+id+"' class='card card-mlv card-project'>").data("project",proj);
-			
+	
 		card.append("<img  class='img-fluid' style='opacity:0.4' src='"+proj.large_icon+"'>");
 		card.append("<div class='card-img-overlay'>"+proj.type_label+"</div>");
 		let card_body=$("<div class='card-body d-flex flex-column'></div>").appendTo(card);
@@ -267,7 +271,10 @@ class ProjectCardDeck{
 						new DeleteObjectDialog(id,proj.name,function(){self.projectDeleted(card)});
 			}));
 		}
-		deck.append(card)	
+		deck.append(card);
+		if (this.config.card_classes){
+			card.addClass(this.config.card_classes);
+		}
 	}
 	
 	

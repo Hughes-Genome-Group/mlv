@@ -349,7 +349,14 @@ class GenericObject(object):
     def get_url(self,external=False):
         url = "/projects/"+self.type+"/"+str(self.id)
         if external:
-            url="http://"+app.config['HOST_NAME']+url
+            host_name= None
+            p_h_n = app.config.get("PROJECT_SPECIFIC_HOST_NAME")
+            if p_h_n:
+                host_name = p_h_n.get(self.type)
+            if not host_name: 
+                host_name=app.config['HOST_NAME']
+            
+            url="http://"+host_name+url
         return url
         
     def get_folder(self,subfolder=None,create=True):
@@ -539,22 +546,39 @@ class GenericObject(object):
             "base_image_url":"/data/{}/view_sets/{}/thumbnails/tn".format(self.db,vs.id)
         }
     
-    def add_annotation_intersections(self,ids=[]):
+    def add_annotation_intersections(self,ids=[],extra_columns=None):
         from app.jobs.jobs import AnnotationIntersectionJob
-        j= AnnotationIntersectionJob(inputs={"project_id":self.id,"ids":ids},
+        j= AnnotationIntersectionJob(inputs={"project_id":self.id,"ids":ids,"extra_columns":extra_columns},
                                      user_id=self.owner,
                                      genome=self.db)
         j.send()
         return j.job.id
     
 
-    def find_tss_distances(self):
+    def find_tss_distances(self,go_levels=0):
         from app.jobs.jobs import FindTSSDistancesJob
-        j= FindTSSDistancesJob(inputs={"project_id":self.id},user_id=self.owner,genome=self.db)
+        go_levels=int(go_levels)
+        j= FindTSSDistancesJob(inputs={"project_id":self.id,"go_levels":go_levels},user_id=self.owner,genome=self.db)
         self.set_data("find_tss_distances_job_id",j.job.id)
         self.set_data("find_tss_distances_job_status","running")
         j.send()
         return j.job.id
+    
+    def get_fields(self):
+        vsid=self.get_viewset_id()
+        
+        if vsid:
+            ret_list=[]
+            vs = ViewSet(self.db,vsid)
+            for field in vs.fields:
+                item =vs.fields[field]
+                item["name"]=item["label"]
+                del item["label"]
+                item["field"]=field
+                ret_list.append(item)
+            return ret_list
+        else:
+            return []
     
     def delete_tss_distances(self):
         vs = ViewSet(self.db,self.get_viewset_id())
@@ -702,11 +726,12 @@ class GenericObject(object):
                 "url":local_file.replace("/data",""),
                 "track_id":name,
                 "discrete":True,
-                "height":150,
+                "height":100,
                 "color":"#808080",
                 "scale":"dynamic",
                 "short_label":name,
                 "type":"bigwig",
+                "allow_user_remove":True,
                 "format":"wig"
         })
         self.update()
@@ -731,13 +756,14 @@ class GenericObject(object):
         self.set_data("peak_stats_job_id",jid)
         return jid
     
-    def send_cluster_by_fields_job(self,fields=[],name="",methods=["UMAP"]):
+    def send_cluster_by_fields_job(self,fields=[],name="",methods=["UMAP"],dimensions=2):
         from app.jobs.jobs import ClusterByFieldsJob
         inputs={
             "project_id":self.id,
             "name":name,
             "fields":fields,
-            "methods":methods
+            "methods":methods,
+            "dimensions":dimensions
         }
         j= ClusterByFieldsJob(genome=self.db,user_id=self.owner,inputs=inputs)
         j.send()

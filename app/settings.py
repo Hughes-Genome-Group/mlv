@@ -43,7 +43,7 @@ SECRET_KEY="somerandomstring"
 DB_HOST=os.getenv("DB_HOST") or "localhost"
 DB_USER="mlv"
 DB_PASS=os.getenv("DATABASE_PASS")
-SYSTEM_DATABASE="test"
+SYSTEM_DATABASE="mlv_user"
 SQLALCHEMY_TRACK_MODIFICATIONS = False  
 
 #Filled in from the gemome table
@@ -55,7 +55,7 @@ DATA_FOLDER="/data/mlv/"
 TEMP_FOLDER="/data/mlv/temp"
 TRACKS_FOLDER="/data/tracks"
 
-JS_VERSION="5.045"
+JS_VERSION="5.075"
 
 
 #email settings
@@ -66,6 +66,7 @@ MAIL_USE_TLS = True
 MAIL_USERNAME = 'mlv@gmail.com'
 MAIL_PASSWORD = 'password'
 MAIL_DEFAULT_SENDER = 'The MLV Team'
+HELP_EMAIL_RECIPIENTS=[]
 
 
 HELP_EMAIL_RECIPIENTS=["mlv@gmail.com"]

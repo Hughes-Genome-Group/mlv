@@ -7,7 +7,7 @@ class MLVDialog{
 			config.type="information"
 		}
 		if (!config.mode){
-			config.mode="ok"
+			config.mode="ok";
 		}
 		if (config.close_on_ok===undefined){
 			config.close_on_ok=true;
@@ -42,7 +42,13 @@ class MLVDialog{
 		}
 		let i = MLVDialog.types[config.type];
 		let title= config.title?config.title:i.title;
-		this.div.html(msg).css("font-size","14px");
+		if (typeof msg === "string"){
+			this.div.html(msg).css("font-size","14px");
+		}
+		else{
+			this.div.append(msg)
+		}
+		
 		this.div.dialog({
 			close:function(){
 				$(this).dialog("destroy").remove();
@@ -110,7 +116,9 @@ class MLVColumnCheck{
 		if (!msg){
 			msg = "Columns To Include"
 		}
-		div.append($("<label>").text(msg));
+		if (msg !=="none"){
+			div.append($("<label>").text(msg));
+		}
 		for (let name of this.group_names){
 			div.append("<div><label>"+name +"</label></div>");
 			let col_div=$("<div>").appendTo(div);
@@ -233,6 +241,12 @@ class MLVClusterDialog{
 			d.append(t).append($("<span>").text(cl))
 			
 		}
+		d.append($("<label>Number of Dimensions:</label>").css({"margin-left":"5px"}));
+		this.dimensions_select=$("<select>").appendTo(d);
+		for (let n=2;n<6;n++){
+			this.dimensions_select.append($("<option>").text(n).attr("value",n));
+		}
+		
 	
 		
 		let col_div =$("<div>").appendTo(this.div);
@@ -243,6 +257,10 @@ class MLVClusterDialog{
 	submit(){
 		
 		let fields= this.col_chooser.getCheckedColumns();
+		if (fields.length<3){
+			this.msg.html("Please select more than 1 column ");
+			return;
+		}
 		let self = this;
 		let methods=[];
 		for (let m in this.method_radios){
@@ -255,7 +273,8 @@ class MLVClusterDialog{
 				args:{
 					fields:fields,
 					name:this.name_input.val(),
-					methods:methods					
+					methods:methods,
+					dimensions:parseInt(this.dimensions_select.val())
 					
 				}
 		}
@@ -268,7 +287,8 @@ class MLVClusterDialog{
 		}).done(function(response){
 			if (response.success){
 				self.message.addClass("alert-success").html("Clustering is being carried out").show();
-				self.app.clusteringByFields(response.data)
+				self.app.clusteringByFields(response.data);
+				$("#ucsc-images-submit-btn").attr("disabled",true);
 			}
 			else{
 				self.message.addClass("alert-danger").html(response.msg).show();
@@ -374,6 +394,7 @@ class CreateUCSCImages{
 				self.session_input.attr("disabled",false);
 				self.type="ucsc"
 			})
+		this.ucsc_radio=rb;
 		d= $("<div style='margin-bottom:10px'></div>").appendTo(this.div);
 		d.append(rb).append("<label>UCSC -Add a session URL</label><br>");
 		this.session_input = $("<input type='text' class='form-control'>")
@@ -405,7 +426,7 @@ class CreateUCSCImages{
 		this.preview_image=$("<img>").appendTo(d).hide();
 		this.image_spinner= $("<i class='fas fa-spinner fa-spin' style='font-size:30px;position:absolute;top:140px;left:250px;'></i>").appendTo(d).hide();
 		let msg = "The image could not be retrieved. Make sure the url is correct"
-		this.error_message = $("<div class='alert alert-danger'>"+msg+"</div>").appendTo(d).hide();
+		this.error_message = $("<div class='alert alert-warning'>"+msg+"</div>").appendTo(d).hide();
 		
 		this.div.dialog({
     		close:function(){
@@ -469,8 +490,8 @@ class CreateUCSCImages{
 		}).done(function(response){
 			if (!response.permission){
 				self.div.find("input").attr("disabled",true);
-				self.error_message.html("You do not have permission to create imaged from UCSC - please ask an administrator").show();
-				self.preview_button.attr("disabled",true)
+				self.error_message.html("If you want to create images from UCSC, please ask an administrator").show();
+				self.ucsc_radio.attr("disabled",true)
 			}
 		})
 		
@@ -659,24 +680,26 @@ class CreateCompoundColumn{
 			],
 			close:()=>{this.div.dialog("destroy").remove()}
 		}).dialogFix();
-		this.div.append("<label>Name</label>");
+		this.div.append("<label>Column Name</label>");
 		this.name_input = $("<input type='text' class='form-control'>")
 			.appendTo(this.div);
 		let div =this.getDiv().appendTo(this.div);
-		div.append("<label>Field1</label><br>");
+		div.append("<label style='width:100px'>Field1</label>");
 		
 		
 		this.field1= this.getSelect().appendTo(div);
+		
 	
-		this.operand=$("<select>").append(this.getOption("/","/"))
+		this.operand=$("<select>").append(this.getOption("log2 fold change","log_change"))
+		                           .append(this.getOption("/","/"))
 								   .append(this.getOption("*","*"))
 								    .append(this.getOption("+","+"))
 								    .append(this.getOption("-","-"));
 		div =this.getDiv().appendTo(this.div);
-		div.append("<label>Operand</label><br>");
-		div.append(this.operand.css("padding-left","20px"));
+		div.append("<label style='width:100px'>Operand</label>");
+		div.append(this.operand);
 		div =this.getDiv().appendTo(this.div);
-		div.append("<label>Field2</label><br>");
+		div.append("<label style='width:100px'>Field2</label>");
 		this.field2= this.getSelect().appendTo(div);
 		this.message = $("<div class='alert alert-warning'>The column is being generated </div>").hide()
 		.appendTo(this.div);
@@ -685,7 +708,7 @@ class CreateCompoundColumn{
 	}
 	
 	getSelect(){
-		let select= $("<select>").css("max-width","200px");
+		let select= $("<select>").css("max-width","300px");
 		 for (let column of this.app.columns){
 			  if (column.datatype!=="integer" && column.datatype!=="double"){
 				  continue;
@@ -736,21 +759,25 @@ class MLVPeakStatsDialog{
 		let self =this;
 		this.bigwig_number=0;
 		this.div=$("<div>");
+		this.div.append("<div class='info-text'> Enter the url(s) of publically accesible BigWig files to process and press Add</div>")
 		let d= $("<div style='margin-bottom:10px'></div>").appendTo(this.div)
-		d.append("<label>BigWig URL</label>");
-		//let msg ="Usually your email address"
-		//	d.append($("<p class= 'info-text'></p>").text(msg));
-		this.bigwig_input = $("<input type='text' class='form-control'>")
+		
+		d.append("<label>BigWig URL(S)</label>");
+	
+		this.bigwig_input = $("<textarea class='form-control'></textarea>")
 			.appendTo(d);
 		
-		//d= $("<div style='margin-bottom:10px'></div>").appendTo(this.div)
-		d.append("<label>Name</label><br>");
-		//msg ="The code which appears before the hyphen in one of your collection urls e.g ztrbzvw2"
-		//d.append($("<p class= 'info-text'></p>").text(msg));
-		this.name_input = $("<input type='text' class='form-control' style='width:150px;margin-right:10px'>")
-			.appendTo(d);
-		$("<button>").text("Add").attr("class","btn btn-sm btn-primary").click(function(e){
-			self.addWigFile();
+
+		$("<button>")
+		.css("margin-top","3px")
+		.text("Add").attr("class","btn btn-sm btn-primary").
+		click(function(e){
+			self.error_message.empty().hide()
+			let text = self.bigwig_input.val();
+			let arr = text.trim().match(/[^\s]+/g)
+			for (let url of arr){
+				self.addWigFile(url);
+			}
 		}).appendTo(d);
 		this.div.append("<label> BigWig Tracks to Process</label><br>")
 		this.bigwigs= $("<div style='margin-bottom:10px'></div>").appendTo(this.div);
@@ -763,7 +790,7 @@ class MLVPeakStatsDialog{
     		},
     		title:"Add Peak Stats",
     		autoOpen:true,
-    		width:280,
+    		width:400,
     		height:400,
     		buttons:[
     			{
@@ -785,15 +812,10 @@ class MLVPeakStatsDialog{
 		$("#peak-stats-submit").attr("disabled",true);
 	}
 	
-	addWigFile(){
-		this.error_message.hide();
-		let url = this.bigwig_input.val();
-		let name = this.name_input.val();
+	addWigFile(url){
+	
 		let self = this;
-		if  (!name){
-			this.error_message.text("Please enter a name").show();
-			return;
-		}
+
 		$.ajax({
 			url:"/meths/validate_track_url",
 			type:"POST",
@@ -801,25 +823,27 @@ class MLVPeakStatsDialog{
 			data:{url:url}
 		}).done(function(result){
 			if (result.valid){
-				self.bigwigs.append(self.getBigWigDiv(name,url));
+				self.bigwigs.append(self.getBigWigDiv(url));
 				self.bigwig_input.val("");
-				self.name_input.val("");
 				self.bigwig_number++;
 				$("#peak-stats-submit").attr("disabled",false);
 				
 			}
 			else{
-				self.error_message.text("Invalid URL").show();
+				self.error_message.append("<span>"+url+"</span><br><span>is invalid</span>").show();
 			}
 		})
 	}
 	
-	getBigWigDiv(name,url){
+	getBigWigDiv(url){
 		let d = $("<div>");
 		let self = this;
-		d.append("<span>"+name+"</span>");
+		let arr =url.split("/")
+		let name = arr[arr.length-1].split(".")[0];
+		let n_i= $("<input>").val(name).appendTo(d);
+	
 		$("<i class='fas fa-trash'></i>")
-		.css({cursor:"pointer",float:"right"})
+		.css({cursor:"pointer",float:"right","font-size":"18px"})
 		.click(function(e){
 			d.remove();
 			self.bigwig_number--;
@@ -828,7 +852,7 @@ class MLVPeakStatsDialog{
 			}
 			
 		}).appendTo(d);
-		d.data("bigwig",url).data("name",name)
+		d.data("bigwig",url).data("name",n_i)
 		return d
 	}
 	
@@ -837,7 +861,7 @@ class MLVPeakStatsDialog{
 		let wig_locations=[];
 		let self = this;
 		this.bigwigs.children().each(function(index,item){
-			names.push($(item).data("name"));
+			names.push($(item).data("name").val());
 			wig_locations.push($(item).data("bigwig"))
 		})
 		
@@ -848,6 +872,8 @@ class MLVPeakStatsDialog{
 					wig_names:names
 				}
 		}
+		
+		
 		$.ajax({
 			url:"/meths/execute_project_action/"+this.app.project_id,
 			type:"POST",
@@ -857,7 +883,8 @@ class MLVPeakStatsDialog{
 		}).done(function(response){
 			if (response.success){
 				$("#peak-stats-submit").attr("disabled",true);
-					self.error_message.removeClass("alert-danger")
+				self.div.children().hide();
+				self.error_message.removeClass("alert-danger")
 						.addClass("alert-success")
 						.html("Peak stats are being calculated - you will get an email when this is complete. You can follow the progress in my jobs.")
 						.show();
@@ -868,7 +895,8 @@ class MLVPeakStatsDialog{
 				self.error_message.html(response.msg).show();
 			}
 			
-		})
+		});
+		
 		
 	}
 	
@@ -1279,7 +1307,12 @@ class AddAnnotations{
 		let self=this;
 		
 		this.project_chooser.show(function(ids){
-			self.sendJob(ids,existing_annotations);
+			if(ids.length===1){
+				self.getExtraFields(ids[0],existing_annotations)
+			}
+			else{
+				self.sendJob(ids,existing_annotations);
+			}
 		});
 	}
 	
@@ -1327,10 +1360,76 @@ class AddAnnotations{
 			})
 	}
 	
+	
+	getExtraFields(item,existing_annotations){
+		let self = this;
+		$.ajax({
+			url:"/meths/get_project_fields/"+item.id,
+			dataType:"json"
+		}).done(function(response){
+			if (response.length==0){
+				self.sendJob([item],existing_annotations)
+			}
+			else{
+				
+				let div=$("<div>");
+				let column_div =$("<div>")
+				let rb = $("<input>")
+				.attr({name:"anno-type",type:"radio",value:"single",checked:true})
+				.click(function(e){
+					column_div.find("input[type=checkbox]").attr("disabled",true);
+				})
+				div.append(rb).append("<label>Single True/False Column</label>");
+			
+			
+			
+			
+				
+				
+				
+				
+				$("<div>").text("A single TRUE/FALSE column, indicating overlap will be added").appendTo(div);
+				div.append("<hr>");
+				
+				rb = $("<input>")
+				.attr({name:"anno-type",type:"radio",value:"multi"})
+				.click(function(e){
+					column_div.find("input[type=checkbox]").attr("disabled",false);
+					
+				})
+				div.append(rb).append("<label>Annotation Columns</label><br>");
+				$("<div>").text("Select columns, whose values will be added from the annotation if an overlap occurs").appendTo(div);
+				
+				column_div.appendTo(div)
+				let col_check=new  MLVColumnCheck(column_div,response,null,"none")
+				div.dialog({
+					close:function(){
+						$(this).dialog("destroy").remove();
+					},
+					title:"Inoformation to Record",
+					buttons:[{
+						text:"OK",
+						click:function(e){
+							let ec = col_check.getCheckedColumns();
+							if (ec.length===0 || $("input[name=anno-type]:checked").val()==="single"){
+								ec=null;
+							}
+							self.sendJob([item],existing_annotations,ec);
+							div.dialog("close");
+							
+						}
+					}]
+				}).dialogFix();
+				column_div.find("input[type=checkbox]").attr("disabled",true);			
+			}		
+		})
+		
+	}
+	
 
 
 	
-	sendJob(items,existing_annotations){
+	sendJob(items,existing_annotations,extra_columns){
 		if (!existing_annotations){
 			existing_annotations={};
 		}
@@ -1339,7 +1438,7 @@ class AddAnnotations{
 		let already_annotations=[];
 		for (let item of items){
 			if (existing_annotations[item.id]){
-				already_annotations.push(item.name)
+				//already_annotations.push(item.name)
 			}
 			ids.push(item.id);
 		}
@@ -1353,7 +1452,8 @@ class AddAnnotations{
 		let data={
 			method:"add_annotation_intersections",
 			args:{
-				ids:ids
+				ids:ids,
+				extra_columns:extra_columns
 			}
 		}
 		$.ajax({

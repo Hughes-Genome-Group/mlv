@@ -1,12 +1,326 @@
 {% extends "common/page_base.html" %}
 {% block stylesheets %}
 	{{ super() }}
+	<link href="/multi_locus_view/static/custom_home/pe-icons.css" rel="stylesheet">
+    <link href="/multi_locus_view/static/custom_home/prettyPhoto.css" rel="stylesheet">
+    <link href="/multi_locus_view/static/custom_home/animate.css" rel="stylesheet">
+    <link href="/multi_locus_view/static/custom_home/style.css" rel="stylesheet">
+	
 {% endblock %}
 
 {% block outercontent %}
+	<div id="preloader"></div>
+    <section id="main-slider" class="no-margin">
+        <div class="carousel slide" data-ride="carousel">
+            <div class="carousel-inner">
+                <div class="item active">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="carousel-content center centered">
+                                	<p><img src="/multi_locus_view/static/img/mlv_icon_med.png" class="bounce-in"></img></p>
+                                    <!--<p><h2 class="boxed animation animated-item-1 fade-down">MULTI LOCUS VIEW</h2></p>-->
+                                    <p class="boxed animation animated-item-2 fade-up">In Depth Analysis of NGS Experiments.</p>
+                                    <br>
+                                    <a class="btn btn-sm animation bounce-in" href="/projects/multi_locus_view/home">Create Project</a>
+                                     <a class="btn btn-md animation bounce-in" href="#information">Learn More</a>
+                                   
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!--/.item-->
+            </div><!--/.carousel-inner-->
+        </div><!--/.carousel-->
+    </section><!--/#main-slider-->
+    
+ 
+    
+    
 
+    <div id="content-wrapper">
+     
+    <section id="information" class="divider-section">
+    
+	            <div class="container">
+	            	<div class="gap"></div>
+	                <div class="row">
+	                
+	                                            <div class="col-sm-12 fade-up">
+	                                                <p>Tracking and understanding data quality, analysis and reproducibility are critical concerns in the biological sciences. This is especially true in genomics where Next Generation Sequencing (NGS) based technologies such as ChIP-seq, RNA-seq and ATAC-seq are generating a flood of genome-scale data. These data-types are extremely high level and complex with single experiments capable of mapping 10-100’s of thousands of biologically meaningful events across the genome. However, such data are usually processed with automated pipelines resulting in  tabular outputs, which are difficult to verify and interpret without looking at the underlying data and combining it with data from other experiments. Conventional genome browsers are limited to single locations and do not allow for interactions with the dataset as a whole.  MLV has been developed to allow users to fluidly interact with genomics datasets at multiple scales, from complete metadata labelled and clustered populations to detailed representations of individual elements.  It has inbuilt tools to integrate signals across multiple dataset and to perform dimensionality reduction and clustering analysis. 
+	                                            </div>
+	                   
+	                </div>
+	                <div class="gap"></div>
+	      		</div>
+  		</section>
+        <section id="services" class="white">
+            <div class="container">
+            <div class="gap"></div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="center gap fade-down section-heading">
+                            <h2 class="main-title">Publications</h2>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row fade-up">
+                    <div class="col-md-6">
+                    	<div class="list-group">
+	  						<a href="https://www.biorxiv.org/content/10.1101/2020.03.02.953745v1" class="list-group-item list-group-item-action flex-column align-items-start">
+	    						<div class="d-flex w-100 justify-content-between">
+	      							<h6 class="mb-1">Targeted high-resolution chromosome conformation capture at genome-wide scale <br></h6>
+	    						</div>
+	    						<p class="mb-1">Downes et al. (2020)</p>
+	    						<small>bioRxiv</small>
+	  						</a>	  					
+						</div>       
+                	</div>
+                	
+	                <div class="col-md-6">
+	                    <div class="list-group">
+	  						<a href="https://www.biorxiv.org/content/10.1101/2020.02.17.952572v1" class="list-group-item list-group-item-action flex-column align-items-start">
+	    						<div class="d-flex w-100 justify-content-between">
+	      							<h6 class="mb-1">CaptureCompendium:a comprehensive toolkit for 3C analysis</h6>
+	    						</div>
+	    						<p class="mb-1">Telenius et al. (2020)</p>
+	    						<small>bioRxiv</small>
+	  						</a>
+	  					
+						</div>       
+	                </div>
+                </div>
+                
+                <div class="gap"></div>
+                
+                
+
+                <div class="row">
+                    <div class="col-md-6 col-sm-6">
+                        <div class="service-block">
+                            <div class=" text-center icon-header bounce-in">
+                                <i class="fas fa-book-open"></i>
+                                 <span class=" pull-right ">Documentation</span>
+                            </div>
+                            <div class="media-body fade-up">
+                               <div class= "list-group">
+                                  <a href="https://lanceotron.readthedocs.io/en/latest/multi_locus_view/multi_locus_view.html" class="list-group-item list-group-item-action">
+                                  		User Documentation
+                                  </a>
+                                   <a href="https://lanceotron.readthedocs.io/en/latest/mlv_developer/developer.html" class="list-group-item list-group-item-action">
+                                  		Developer Documentation
+                                  </a>
+                               </div>
+                                
+                            </div>
+                        </div>
+                    </div><!--/.col-md-4-->
+                    <div class="col-md-6 col-sm-6">
+                        <div class="service-block">
+                         <div class=" text-center icon-header bounce-in">
+                                <i class="fab fa-github"></i>
+                                 <span class=" pull-right ">Source Code</span>
+                            </div>
+                         
+                            <div class="media-body fade-up">
+                               <div class= "list-group">
+                                  <a href="https://github.com/Hughes-Genome-Group/mlv" class="list-group-item list-group-item-action">
+                                  		MLV - Main Source Code 
+                                  </a>
+                                   <a href="https://github.com/Hughes-Genome-Group/MLVPanel"  class="list-group-item list-group-item-action">
+                                  		MLVPanel - lightweight embeddable JavaScript genome browser
+                                  </a>
+                                  
+                                   <a href="https://github.com/Hughes-Genome-Group/CIView" class="list-group-item list-group-item-action">
+                                  		CIView - Interactive JavaScript charts/tables/images
+                                  </a>
+                               </div>
+                              
+                            </div>
+                        </div>
+                    </div><!--/.col-md-4-->
+                  
+                </div><!--/.row-->
+                
+                
+                 
+                
+               
+               
+               
+                
+
+            <section id="blog" class="white">
+                <div class="container">
+                    <div class="center gap fade-down section-heading">
+                   		<div class="gap"></div>
+                        <h2 class="main-title">Applications that use MLV</h2>
+                        <hr>
+                        <p>MLV is designed to be modular and allows development of other NGS visualisation solution </p>
+                    </div>
+                    <div class="gap"></div>
+                    <div class="row">
+	                    <div class="col-md-1"></div>
+	                    <div class="col-md-5">
+	                        <div class="post flip-in">
+	                          
+	                            <div class="content">
+	                                <h4 >CaptureSee</h4>
+	                              	 <div class="post-img-content ">
+	                                <img src="/multi_locus_view/static/custom_home/capture_c_icon.png" />
+	                                
+	                            </div>
+	                                <div>
+	                                   CaptureSee facilitates the easy interaction with higly multiplexec3C data.
+										It enables users to quickly jump between capture viewpoints in the genome, 
+										to see reporter counts for each viewpoint on a per sample basis, 
+										and filter DESeq2 results to find significantly interacting RE fragments.  
+	                                </div>
+	                                <div class="read-more-wrapper">
+	                                    <a href="https://capturesee.molbiol.ox.ac.uk" class="btn btn-outlined btn-primary">View</a>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="col-md-5">
+	                        <div class="post flip-in">
+	                            
+	                            <div class="content">
+	                                <h4>Lanceotron</h4>
+	                                <div class="post-img-content">
+	                                	<img src="/multi_locus_view/static/custom_home/lanceotron_icon.png" />
+	                               </div>
+	                                <div>
+	                                    A graphical tool for peak calling chromatin profiling assays e.g. ChIPseq.
+										Lanceotron utilises a powerful computer vision, deep learning algorithm to analyse the
+										shape of peaks. Initial parameters can be
+										selected interactivly and the final results further refined by the help of charts and images. 
+	                                </div>
+	                                <div class="read-more-wrapper">
+	                                    <a href="https://lanceotron.molbiol.ox.ac.uk" class="btn btn-outlined btn-primary">View</a>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="col-md-1"></div>
+	                    
+                    </div>
+                </div>
+       		</section>
+       		
+       		
+       		
+                
+                
+               
+
+               
+                
+                	            <div class="center gap fade-down section-heading">
+	                <h2 class="main-title">Latest Projects</h2>
+	                
+	            </div>
+	            <div class="gap"></div>
+	            
+	           
+
+	            <div class="row">
+	                <div id="latest-projects" class="center"></div> 
+	               
+                </div>
+                
+                
+                
+             </div>
+         
+          </section>
+          
+         
+
+        <section id="stats" class="divider-section">
+            <div class="gap"></div>
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-4 col-xs-6">
+                        <div class="center bounce-in">
+                            <span class="stat-icon"><span class="fas fa-users bounce-in"></span></span>
+                            <h1><span id="users-counter" class="counter">16875</span></h1>
+                            <h3>USERS</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xs-6">
+                        <div class="center bounce-in">
+                            <span class="stat-icon"><span class="fas fa-project-diagram bounce-in"></span></span>
+                            <h1><span id= "projects-counter" class="counter">99999999</span></h1>
+                            <h3>PROJECTS</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xs-6">
+                        <div class="center bounce-in">
+                            <span class="stat-icon"><span class="fas fa-tasks bounce-in"></span></span>
+                            <h1><span id="jobs-counter" class="counter">54875</span></h1>
+                            <h3>JOBS</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gap"></div>
+        </section>
+         
+          
+          
+          
+          
+          
+          </div>
+          
+
+    
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
+    <script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="/multi_locus_view/static/custom_home/plugins.js"></script>
+    <script src="/multi_locus_view/static/custom_home/jquery.prettyPhoto.js"></script>
+    <script src="/multi_locus_view/static/custom_home/init.js"></script>
+    <script>
+    	jQuery(document).ready(function($){
+    		$.ajax({
+        		url:"/meths/jobs/get_all_stats",
+        		dataType:"json"
+        	}).done(function(data){
+        		for (let t of ["users","projects","jobs"]){
+        			$("#"+t+"-counter").text(data[t]);        			
+        		}
+        		
+        	})
+    		$("#container").css("padding","0px");
+    	
+      		jQuery('body').backstretch([
+	        "/multi_locus_view/static/custom_home/slider_1.png",
+	        "/multi_locus_view/static/custom_home/slider_track.png",
+	        "/multi_locus_view/static/custom_home/slider_3.png"
+	    	], {duration: 2000, fade: 500, centeredY: true });
+    	});
+    	new ProjectCardDeck("latest-projects",{type:["multi_locus_view"]},
+    			{	limit:4,hide_navbar:true,
+    				hide_more_button:true,card_classes:"no-display",
+    				data_loaded:function(){
+    				$(".card-project").one("inview",function(){
+    					$(this).addClass('animated bounceIn appear');
+    				})
+    				}
+    			});
+    
+    	
+    
+   
+    
+    </script>
+     
+    
+
+    
 {% endblock %}

@@ -119,6 +119,13 @@ class User(db.Model, UserMixin):
                 db.session.add(perm)
         db.session.commit()
         
+    def add_create_permission(self,project_type):
+        if not self. has_permission("create_project_type",project_type):
+            perm = Permission(user_id=self.id,permission="create_project_type",value=project_type)
+            db.session.add(perm)
+            db.session.commit()
+        
+        
     @staticmethod
     def get_create_permissions(user,genome):
         '''Checks whether the user has create permissions
@@ -167,6 +174,15 @@ class User(db.Model, UserMixin):
 @user_registered.connect_via(app)
 def _after_registration_hook(sender,user,**extra):
     user.add_all_create_permissions()
+    
+    
+def add_create_permissions(project_type):
+       users = db.session.query(User).all()
+       for user in users:
+           if user.id>1:
+               user.add_create_permission(project_type)
+       
+    
 
 
 # Define the user permissions

@@ -39,8 +39,8 @@ class AnnotationSet(GenericObject):
         print (bed)
         self.create_from_file(files,fields=new_fields,process_file=False)
         
-        
-        
+    def get_fields(self):
+        return self.data["fields"]   
     
     def create_from_file(self,files={},has_headers=False,fields=[],delimiter="\t",process_file=True):
         try:
@@ -63,8 +63,9 @@ class AnnotationSet(GenericObject):
                         if reader.line_num==1 and has_headers:
                             continue                  
                         out_arr=row[0:3]
-                        for field in fields:
-                            out_arr.append(row[field["position"]-1])
+                        if len(fields)>3:
+                            for field in fields[3:]:
+                                out_arr.append(row[field["position"]-1])
                         outfile.write("\t".join(out_arr)+"\n")
             
                 outfile.close()
@@ -73,6 +74,7 @@ class AnnotationSet(GenericObject):
                 new_fields=[]
                 for count,field in enumerate(fields[3:],start=1):
                     field["position"]=count
+                    field["field"]="f{}".format(count)
                     new_fields.append(field)
                 fields=new_fields
             

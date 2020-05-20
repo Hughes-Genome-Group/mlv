@@ -96,7 +96,7 @@ def create_gene_set(genome,name,gene_file,description="",make_default=False):
     sql = "UPDATE gene_sets SET table_name=%s WHERE id=%s"
     db.execute_update(sql,(table_name,new_id))
     if make_default:
-        sql="UPDATE genomes SET data = jsonb_set(data, '{{defualt_gene_set}}', '{}') WHERE name = %s".format(new_id)
+        sql="UPDATE genomes SET data = jsonb_set(data, '{{default_gene_set}}', '{}') WHERE name = %s".format(new_id)
         databases["system"].execute_update(sql,(genome,))
     file_name = os.path.join(app.root_path, 'databases', 'create_gene_set.sql')
     script = open(file_name).read().format(db_user=app.config['DB_USER'],table_name=table_name)
