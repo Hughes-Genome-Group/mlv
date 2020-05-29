@@ -21,6 +21,6 @@ Two other applications which use MLV are:-
 MLV utilises two stand alone JavaScript components that can be embedded in other applicatons
 
 * [CIView](https://github.com/Hughes-Genome-Group/CIView) - Cross Filter Image Viewer.  Interactive charts, tables and images
-* [MLVPanel](https://github.com/Hughes-Genome-Group/MLVPanel) - Lightwight, extensible  embedable genome browser designed to for showing multiple locations simultaneously
+* [MLVPanel](https://github.com/Hughes-Genome-Group/MLVPanel) - Lightwight, extensible  embedable genome browser designed for showing multiple locations simultaneously
 
 ![Screen Shot](cover.png)
