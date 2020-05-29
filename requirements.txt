@@ -79,5 +79,5 @@ ujson==1.35
 umap-learn==0.3.10
 urllib3==1.22
 vine==1.1.4
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 WTForms==2.1
