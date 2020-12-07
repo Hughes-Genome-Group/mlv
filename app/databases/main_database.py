@@ -72,7 +72,7 @@ def get_databases(databases,app,min_db_connections=1):
         system_db_conn=_get_db_connection(app,app.config['SYSTEM_DATABASE'],True)
         databases["system"]=Database(system_db_conn,10,app)
         #now get th genome databases
-        sql = "SELECT name,database,data,connections FROM genomes ORDER BY id"
+        sql = "SELECT name,database,data,label,connections FROM genomes ORDER BY id"
         genomes= databases['system'].execute_query(sql)
         already={}
         for genome in genomes:
@@ -84,10 +84,28 @@ def get_databases(databases,app,min_db_connections=1):
             
                 databases[genome['name']]=Database(db_conn,genome['connections'],app,min_db_connections)
                 already[genome["database"]]=databases[genome["name"]]
+            dgs= genome["data"].get("default_gene_set",1)
+            sql = "SELECT description FROM gene_sets WHERE id=%s"
+            res = databases[genome["name"]].execute_query(sql,(dgs,))
+            dgs_desc= "No annotations"
+            if len(res)>0:
+                dgs_desc=res[0]["description"]
             app.config["GENOME_DATABASES"][genome["name"]]={
-                "default_gene_set":genome["data"].get("default_gene_set",1),
+                "default_gene_set":dgs,
+                "gene_description":dgs_desc,
+                "label":genome["label"],
                 "database":genome["database"]
             }
+             
+            fi = os.path.join(app.config["DATA_FOLDER"],genome["name"],"ens_to_ucsc.txt")
+            if os.path.exists(fi):
+                ens_to_ucsc={}
+                with open(fi) as f:
+                    for line in f:
+                        arr =line.strip().split("\t")
+                        ens_to_ucsc[arr[0]]=arr[1]
+                app.config["GENOME_DATABASES"][genome["name"]]["ens_to_ucsc"]=ens_to_ucsc
+                        
         #close the connection and re-open as this will cause problems with forking
         databases["system"].dispose()
         databases["system"]=Database(system_db_conn,10,app,min_db_connections)
@@ -338,6 +356,17 @@ class Database(object):
             self.pool.putconn(conn)
             
         return results
+    
+    def get_sql(self,sql,vars=None):
+        conn=self.get_connection()
+        try:
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            result = cursor.mogrify(sql,vars)
+            self.pool.putconn(conn)
+            return result
+        except Exception as e:  
+            self.app.logger.exception("The SQL could not be run:\n{}".format(sql))
+            self.pool.putconn(conn)
     
     
     def delete_by_id(self,table,ids):

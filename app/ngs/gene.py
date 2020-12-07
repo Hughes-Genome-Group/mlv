@@ -271,6 +271,15 @@ def get_genes(genome,chr,start,end,gene_set_id=None,unique_only=False,sorted=Fal
     Returns:   
         
     '''
+    lookup = app.config["GENOME_DATABASES"][genome].get("ens_to_ucsc")
+    is_ens=False
+    t_chr=chr
+    if lookup:
+        t_chr = lookup.get(chr)
+        if t_chr:
+            is_ens=True
+        else:
+            t_chr=chr
     if not gene_set_id:
         gene_set_id= app.config["GENOME_DATABASES"][genome]["default_gene_set"]
     db=databases[genome]
@@ -282,14 +291,16 @@ def get_genes(genome,chr,start,end,gene_set_id=None,unique_only=False,sorted=Fal
     sql = "SELECT {} {} FROM {} WHERE chrom=%s AND tx_end>%s AND tx_start<%s".format(distinct,fields,"gene_set_"+str(gene_set_id))
     if sorted:
         sql+=" ORDER BY tx_start,tx_end"
-    genes = db.execute_query(sql,(chr,start,end))
+    genes = db.execute_query(sql,(t_chr,start,end))
     for gene in genes:
-        _process_gene(gene)
+        _process_gene(gene,is_ens,chr)
    
   
     return genes
     
-def _process_gene(gene):    
+def _process_gene(gene,is_ens,chr):
+    if is_ens:
+        gene["chr"]=chr    
     exons=[]
     for a in range(0,len(gene['exon_starts'])):
         exons.append({"start":gene['exon_starts'][a],"end":gene['exon_ends'][a]})

@@ -1,0 +1,135 @@
+{	
+
+	"projects":[
+	{
+        "name":"data_view",
+        "label":"Data View",
+        "icon":"img/icons/peak_models_icon.png",
+        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+        "is_public":false,
+        "main_project":true,
+        "can_create":true,
+        "enter_genome":false
+    },
+    {
+        "name":"group_view",
+        "label":"Group View",
+        "icon":"img/icons/peak_models_icon.png",
+        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+        "is_public":false,
+        "main_project":true,
+        "can_create":true,
+        "enter_genome":true
+    },
+    {
+        "name":"experiment",
+        "label":"Data Set",
+        "icon":"img/icons/peak_models_icon.png",
+        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+        "is_public":false,
+        "main_project":false,
+        "can_create":true,
+        "enter_genome":false
+    },
+      {
+        "name":"experiment_group",
+        "label":"Experiment Group",
+        "icon":"img/icons/peak_models_icon.png",
+        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+        "is_public":false,
+        "main_project":false,
+        "can_create":false,
+        "enter_genome":false
+    },
+    
+    {
+       "name":"mev_sample_set",
+       "label":"Sample Set",
+       "icon":  "img/icons/peak_models_icon.png",
+       "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+       "is_public":false,
+       "main_project":false,
+       "can_create":false,
+       "enter_genome":true
+   
+    
+    },
+    {
+       "name":"mev_sample_field",
+       "label":"Sample Field",
+       "icon":  "img/icons/peak_models_icon.png",
+       "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+       "is_public":false,
+       "main_project":false,
+       "can_create":false,
+       "enter_genome":true
+    
+    },
+    {
+       "name":"mev_feature_set",
+       "label":"Feature Set",
+       "icon":  "img/icons/peak_models_icon.png",
+       "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
+       "is_public":false,
+       "main_project":false,
+       "can_create":false,
+       "enter_genome":true
+    
+    }
+    
+    
+    
+    
+    
+    ],
+    "is_private":true,
+    "config":{
+    	"MEV_SAMPLE_COLUMNS":{
+    	
+    		"source":{
+    			"name":"Source",
+    			"field":"source",
+    	     	"datatype":"text",
+    	     	"group":"Sample",
+    	     	"id":"source"
+    	     
+    		},
+    		"sex":{
+    			"name":"Sex",
+    			"field":"sex",
+    	     	"datatype":"text",
+    	     	"group":"Sample",
+    	     	"id":"sex"
+    	     
+    		},
+    		"ethnicity":{
+    			"name":"Ethnicity",
+    			"field":"ethnicity",
+    	     	"datatype":"text",
+    	     	"group":"Sample",
+    	     	"id":"ethnicity"
+    	     
+    		},
+    		
+    		"age_range":{
+    			"name":"Age Range",
+    			"field":"age_range",
+    	     	"datatype":"text",
+    	     	"group":"Sample",
+    	     	"id":"age_range"
+    	     
+    		}
+    		
+    	},
+    	"MEV_EXPERIMENT_TEMPLATES":{
+    	     "cytof":{"id":"cytof","name":"CYTOF","file":"experiment_templates/cytof.json"} 		
+    	},
+    	
+    	"MEV_DEFAULT_SAMPLE_FIELDS":[3615,3616],
+    	"MEV_SAMPLE_ID":"combat_id"
+    	
+    	
+    }
+    
+
+}

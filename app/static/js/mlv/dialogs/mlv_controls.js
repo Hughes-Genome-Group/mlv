@@ -268,37 +268,61 @@ class MLVClusterDialog{
 				methods.push(m)
 			}
 		}
-		let data={
-				method:"send_cluster_by_fields_job",
-				args:{
+		let data=
+				{
 					fields:fields,
 					name:this.name_input.val(),
 					methods:methods,
 					dimensions:parseInt(this.dimensions_select.val())
 					
 				}
-		}
-		$.ajax({
-			url:"/meths/execute_project_action/"+this.app.project_id,
-			type:"POST",
-			data:JSON.stringify(data),
-			dataType:"json",
-			contentType:"application/json"
-		}).done(function(response){
-			if (response.success){
-				self.message.addClass("alert-success").html("Clustering is being carried out").show();
-				self.app.clusteringByFields(response.data);
-				$("#ucsc-images-submit-btn").attr("disabled",true);
-			}
-			else{
-				self.message.addClass("alert-danger").html(response.msg).show();
-			}
-			
-			
-		});
+		this.app.initiateJob("cluster_by_fields_job",data);
+		this.div.dialog("close");
 		
 		
 	}
+}
+
+
+class MLVProjectInfoDialog{
+	constructor(name,description,genome_info){
+		
+		this.div = $("<div>");
+		let self = this;
+		
+		this.addSection("Name",name);
+		this.addSection("Description",description);
+		this.addSection("Genome",genome_info.label);
+		this.addSection("Build",genome_info.build);
+		this.addSection("Gene Annotation",genome_info.gene_description);
+		this.div.dialog({
+    		close:function(){
+    			$(this).dialog("destroy").remove();
+    		},
+    		title:"Project Information",
+    		autoOpen:true,
+    		
+    		position:{my:"center top",at:"center top"},
+    		buttons:[    			
+    			{
+    				text:"OK",
+    				click:function(){
+    					$(this).dialog("close");
+    				}
+    			},
+    			
+    		]
+    	
+    	}).dialogFix();
+		
+		
+	}
+	
+	addSection(title,content){
+		this.div.append(`<div><label>${title}</label></div>`);
+		this.div.append($("<div>").html(content));
+	}
+	
 }
 
 
@@ -358,9 +382,16 @@ class DeleteColumnsDialog{
 			if (response.success){
 				self.message.removeClass("alert-warning").addClass("alert-success").html("The columns have been successfully removed").show();
 				self.app.removeColumns(fields);
+				if (response.data.history){
+					self.app.history=response.data.history;
+					if (self.app.history_dialog){
+						self.app.history_dialog.refesh();
+					}
+				}
 			}
 			else{
 				self.message.removeClass("alert-warning").addClass("alert-danger").html(response.msg).show();
+				
 			}
 			
 			
@@ -370,10 +401,11 @@ class DeleteColumnsDialog{
 }
 
 class CreateUCSCImages{
-	constructor(project_id,table,browser){
-		this.browser=browser;
-		this.table=table;
-		this.project_id=project_id;
+	constructor(app){
+		this.app=app
+		this.browser=app.browser;
+		this.table=app.table;
+		this.project_id=app.project_id;
 		this.div=$("<div>");
 		this.type= "mlv";
 		let self =this;
@@ -498,35 +530,18 @@ class CreateUCSCImages{
 	}
 	
 	
-	submitMLV(){
-		let self =this;
-		let data={
-				method:"make_mlv_images",
-				args:{
-					tracks:this.browser.panel.getAllTrackConfigs(),
-					margins:parseInt(this.margin_input.val()),
-					image_width:parseInt(this.width_input.val())
-					
-				}
+	submitMLV(){		
+		let data={	
+			tracks:this.browser.panel.getAllTrackConfigs(),
+			margins:parseInt(this.margin_input.val()),
+			image_width:parseInt(this.width_input.val())
+
 		}
-		$.ajax({
-			url:"/meths/execute_project_action/"+this.project_id,
-			type:"POST",
-			data:JSON.stringify(data),
-			dataType:"json",
-			contentType:"application/json"
-		}).done(function(response){
-			if (response.success){
-				self.showSuccess(response.data);
-			}
-			else{
-				self.error_message.html(response.msg).show();
-			}
-			
-			
-		});
+		this.app.initiateJob("mlv_images_job",data);
 		
 	}
+	
+	
 	
 	showSuccess(job_id){
 		this.preview_image.hide()
@@ -752,6 +767,288 @@ class CreateCompoundColumn{
 	}
 }
 
+
+class EquationBuilderDialog{
+    constructor(app){
+    	this.app=app;
+        this.calculateGroups(app.columns,"number");
+        let self = this;
+       
+        this.div = $("<div>").dialog({
+            close: ()=>{
+                this.div.dialog("destroy").remove();
+            },
+            position:{my: "top",at: "top"},
+
+            buttons:[
+                {
+                    text:"Submit",
+                    click:function(){
+                        self.submit();
+                    },
+                    id:"create-eq-button"
+
+                },    
+                {
+                    text:"Reset",
+                    click:function(){
+                        self.reset();
+                    }
+
+                },
+                        {
+                    text:"Close",
+                    click:function(){
+                       self.div.dialog("close");
+                    }
+
+                }
+
+            ],
+            width:500,
+            title:"Create Column"
+        }).dialogFix();
+        this.outer_div=$("<div>").appendTo(this.div);
+        this.msg_div=$("<div>").appendTo(this.outer_div);
+        this.msg_div.text("Drag column(s) form the left pane into the grey box and then click on an operand (+,-,*,/) Multiple columns in the same box will be summed or averaged depending on the value of the dropdown");
+    	
+    	let name_div = $("<div>").appendTo(this.outer_div);
+    	name_div.append("<label>Column Name</label>");
+		this.name_input = $("<input type='text' class='form-control'>")
+			.appendTo(name_div);
+		
+        this.lower_div=$("<div>").css("display","flex").appendTo(this.div);
+        this.drop_sections=[];
+
+        this.addColumns();
+        this.main_div= $("<div>").css("padding-left","10px")
+        .css({display:"flex","flex-direction":"column","flex-basis":"100%","flex": 1})
+        .appendTo(this.lower_div);
+        this.main_div.append($("<label>").text("Equation").css({"font-weight":"bold"}));
+        this.ds_div=$("<div>").appendTo(this.main_div).css("min-height","200px");
+        this.addDropSection();
+   
+        let rd = $("<div>").appendTo(this.main_div);
+
+        rd.append($("<label>").text("Final Transformation").css({"font-weight":"bold","display":"block"}));
+        this.addRadioButton(rd,"none",true);
+        this.addRadioButton(rd,"log2");
+        this.addRadioButton(rd,"log10");
+
+    }
+
+    reset(){
+        this.ds_div.empty();
+        this.drop_sections=[];
+        this.addDropSection();
+
+    }
+
+    submit(){
+    	let name = this.name_input.val();
+    	if (!name){
+    		return;
+    	}
+        for (let d of this.drop_sections){
+            if (d.count===0){
+                return;
+            }
+        }
+        let args = this.getEquation(name);
+        let self = this;
+        args.name= name;
+        $("#create-eq-button").attr("disabled",true);
+       
+		this.msg_div.addClass("alert alert-info").html("The column is being created<i style= 'float:right' class='fa fa-spinner fa-spin'></i>")
+		this.app.sendAction("create_compound_column",args).done(function(resp){
+			if (resp.success){
+				self.msg_div.removeClass("alert-info").addClass("alert-success").text("The column has been created")
+				self.app._addDataToView(resp.data);
+				self.app.history.push(resp.data.history);
+		    	if (self.app.history_dialog){
+		    		self.app.history_dialog.refresh();
+		    	}
+			}
+			else{
+				self.msg_div.removeClass("alert-info").addClass("alert-danger").text("There was a problem, please contact an adminisrator");
+			}
+		});
+      
+
+    }
+    addColumns(){
+    	this.col_index={};
+        this.columns_div=$("<div>").appendTo(this.lower_div)
+        .css({"margin-top":"10px",display:"flex","flex-direction":"column","max-height":"400px","overflow-y":"scroll","flex-basis":"100%","flex": 1});
+        this.columns_div.append($("<label>").text("Columns").css({"font-weight":"bold"}));
+        for (let gn of this.group_names){
+        	this.columns_div.append($("<div>").text(gn).css({"font-weight":"bold"}));
+        	let columns = this.groups[gn];
+	        for (let col of columns){
+	        	this.col_index[col.field]=col.name;
+	            $("<div>")
+	            .data("id",col.field)
+	            .text(col.name)
+	            .draggable({
+	                helper:"clone"
+	            })
+	            .css({cursor:"copy"})
+	            .appendTo(this.columns_div);
+	        }
+        }
+    }
+
+    addRadioButton(div, type,checked){
+        let i = $("<input>").attr({type:"radio",name:"eq-final-trans",value:type}).appendTo(div);
+        if (checked){
+            i.attr("checked",true);
+        }
+        div.append($("<label>").text(type).css({"margin-right":"5px","margin-left":"2px"}));
+    }
+
+    addOperand(drop_section,div, symbol){
+        let self = this;
+        let sp= $("<span>").text(symbol)
+        .css({"font-size":"20px","margin-left":"10px","cursor":"pointer","margin-left":"5px","margin-right":"5px"})
+        .click(function(e){
+            drop_section.operand=symbol;
+            div.empty();
+            div.append($("<span>").text(symbol).css({"font-size":"20px","margin-left":"5px","margin-right":"5px"}));
+            self.addDropSection();
+        });
+        div.append(sp);
+    }
+
+    getEquation(name){
+    	let history={
+    	        	label:"Added "+name+" Column",
+    	}
+    	let info="";
+        for (let d of this.drop_sections){
+            let arr=[];
+            let name_arr=[];
+            for (let col in d.columns){
+                arr.push(col);
+                name_arr.push(this.col_index[col])
+            }
+            if (name_arr.length===1){
+            	info+=name_arr[0]+" ";
+            }
+            else{
+            	info+=`${d.aggregate}(${name_arr.join(",")})`;
+            }
+            if (d.operand){
+            	info+=(` ${d.operand} `);
+            }
+            
+            d.columns=arr; 
+        }
+        let final_trans = $("input[name='eq-final-trans']:checked").val();
+        if (final_trans !=="none"){
+        	info = final_trans+"("+info+")";
+        }
+        history.info=info;
+        return {
+        	history:history,
+            stages:this.drop_sections,
+            final_trans:final_trans
+        }
+
+    }
+    addDropSection(){
+        let drop_section={
+            columns:{},
+            count:0,
+            aggregate:"SUM"
+        }
+        let all_div = $("<div>").appendTo(this.ds_div);
+        let agg_select= $("<select disabled><option>SUM</option><option>AVERAGE</option></select>");
+        agg_select.change(function(e){
+            drop_section.aggregate=$(this).val();
+        })
+        all_div.append(agg_select)
+        this.drop_sections.push(drop_section);
+        let ds_div=$("<div>").appendTo(all_div)
+        .css({"min-height":"40px","background-color":"lightgray"})
+        .droppable({
+            drop:function(e,ui){
+               let id  = ui.draggable.data("id");
+               if (drop_section.columns[id]){
+                   return;
+               }
+               let d= $("<div>").text(ui.draggable.text());
+               drop_section.columns[id]=true;
+               drop_section.count++;
+               if (drop_section.count>1){
+                    agg_select.attr("disabled",false);
+               }
+               $("<i class='fas fa-trash'></i>").css("float","right").click(function(e){
+                   d.remove();
+                   delete drop_section.columns[id];
+                   drop_section.count--;
+                   if (drop_section.count<2){
+                       agg_select.attr("disabled",true);
+                   }
+               }).appendTo(d);
+               ds_div.append(d);
+            }
+        });
+
+        let odiv= $("<div>").css("text-align","center").appendTo(all_div);
+        this.addOperand(drop_section,odiv,"+");
+        this.addOperand(drop_section,odiv,"-");
+        this.addOperand(drop_section,odiv,"*");
+        this.addOperand(drop_section,odiv,"/");
+        this.div.resize();
+
+
+        
+    }
+    
+    calculateGroups(columns,filter){
+		let groups={};
+		let group_list= [];
+		groups["Other"]=[]
+		
+		for (let c of columns){
+			if (filter && filter === "number"){
+				if (c.datatype !=="integer" && c.datatype !== "double"){
+					continue;s
+				}
+			}
+			if (c.columnGroup){
+				let li = groups[c.columnGroup]
+				if (!li){
+					li=[];
+					group_list.push(c.columnGroup)
+					groups[c.columnGroup]=li
+				}
+				li.push(c)
+			}
+			else{
+				groups["Other"].push(c)
+			}
+		}
+		for (let g in groups){
+			let li = groups[g];
+			li.sort(function(a,b){
+				return a.name.localeCompare(b.name)
+			})
+		}
+		group_list.sort(function(a,b){
+			return a.localeCompare(b);
+		
+		});
+		group_list.push("Other")
+		this.groups=groups;
+		this.group_names=group_list;
+	}
+
+}
+
+
+
+
 class MLVPeakStatsDialog{
 	constructor(app,icon){
 		this.app=app;
@@ -866,10 +1163,13 @@ class MLVPeakStatsDialog{
 		})
 		
 		let data={
-				method:"send_peak_stats_job",
+				method:"initiate_job",
 				args:{
-					wig_locations:wig_locations,
-					wig_names:names
+					inputs:{
+						wig_locations:wig_locations,
+						wig_names:names
+					},
+					job:"peak_stats_job"				
 				}
 		}
 		
@@ -882,13 +1182,12 @@ class MLVPeakStatsDialog{
 			contentType:"application/json"
 		}).done(function(response){
 			if (response.success){
-				$("#peak-stats-submit").attr("disabled",true);
 				self.div.children().hide();
 				self.error_message.removeClass("alert-danger")
 						.addClass("alert-success")
-						.html("Peak stats are being calculated - you will get an email when this is complete. You can follow the progress in my jobs.")
+						.html("Peak stats are being calculated. You can follow the progress in my jobs.")
 						.show();
-				self.app.calculatingPeakStats(response.data,self.icon)
+				self.app.jobSent(response.data)
 				
 			}
 			else{
@@ -1082,6 +1381,9 @@ class NameDescGenomeForm{
 		else{
 			this.div=div;
 		}
+		if(!defaults){
+			defaults={};
+		}
 		
 		this.project_type=project_type;
 		this.callback=callback;
@@ -1111,12 +1413,12 @@ class NameDescGenomeForm{
 		
 		$("<option>").text("--Select--").val("").appendTo(this.genome_select);
 		
-		
+		let b_text=defaults.button_text?defaults.button_text:"Next";
 		let c_div=$("<div style ='text-align:center'></div>").appendTo(this.div);
 		this.submit_button = $("<button>")
 			.attr({"class":"btn btn-sm btn-primary",disabled:true})
 			.css({"margin-top":"5px"})
-			.text("Next")
+			.text(b_text)
 			.click(function(e){
 				self.submit();
 			}).appendTo(c_div);
@@ -1284,7 +1586,7 @@ class RemoveAnnotationsDialog{
 }
 
 class AddAnnotations{
-	constructor(project_id,genome,callback,project_types){
+	constructor(app,project_types){
 		let config={
 				show_types:true
 		}
@@ -1297,78 +1599,34 @@ class AddAnnotations{
 		}
 		this.project_chooser = new ProjectChooserDialog(project_types,
 				"Select Annotations to Calculate Intersections",
-				genome,
+				app.genome,
 				"Next",config);
-		this.project_id=project_id;
-		this.callback=callback;
+		this.project_id=app.project_id;
+		this.app=app;
 	}
 	
-	showDialog(existing_annotations){
+	showDialog(){
 		let self=this;
 		
 		this.project_chooser.show(function(ids){
 			if(ids.length===1){
-				self.getExtraFields(ids[0],existing_annotations)
+				self.getExtraFields(ids[0])
 			}
 			else{
-				self.sendJob(ids,existing_annotations);
+				self.sendJob(ids);
 			}
 		});
 	}
+
 	
-	allDone(){
-		let msg = "Intesections have been calculated.";
-		msg+="Charts, tracks and columns have been added to the display.";
-		this.waiting_dialog.showMessage(msg);
-	}
-	
-	checkJob(job_id,ids){
-		let self =this;
-		$.ajax({
-			url:"/meths/jobs/check_job_status/"+job_id,
-			dataType:"json",
-			type:"GET"
-		}).done(function(response){
-			if (response.status==="complete" || response.status === "failed"){
-				self.getIntersects(ids);
-			}
-			else{
-				setTimeout(function(){
-					self.checkJob(job_id,ids);
-				},10000);
-			}		
-		});	
-	}
-	
-	getIntersects(ids){
-		let self =this;
-		let data={
-				method:"get_annotation_intersections",
-				args:{
-					ids:ids
-				}
-			}
-			$.ajax({
-				url:"/meths/execute_project_action/"+this.project_id,
-				dataType:"json",
-				type:"POST",
-				contentType:"application/json",
-				data:JSON.stringify(data)
-			}).done(function(response){
-				self.callback(response.data);
-				self.allDone();
-			})
-	}
-	
-	
-	getExtraFields(item,existing_annotations){
+	getExtraFields(item){
 		let self = this;
 		$.ajax({
 			url:"/meths/get_project_fields/"+item.id,
 			dataType:"json"
 		}).done(function(response){
 			if (response.length==0){
-				self.sendJob([item],existing_annotations)
+				self.sendJob([item])
 			}
 			else{
 				
@@ -1406,7 +1664,7 @@ class AddAnnotations{
 					close:function(){
 						$(this).dialog("destroy").remove();
 					},
-					title:"Inoformation to Record",
+					title:"Information to Record",
 					buttons:[{
 						text:"OK",
 						click:function(e){
@@ -1414,7 +1672,7 @@ class AddAnnotations{
 							if (ec.length===0 || $("input[name=anno-type]:checked").val()==="single"){
 								ec=null;
 							}
-							self.sendJob([item],existing_annotations,ec);
+							self.sendJob([item],ec);
 							div.dialog("close");
 							
 						}
@@ -1429,44 +1687,17 @@ class AddAnnotations{
 
 
 	
-	sendJob(items,existing_annotations,extra_columns){
-		if (!existing_annotations){
-			existing_annotations={};
-		}
+	sendJob(items,extra_columns){	
 		let self= this;
-		let ids=[];
-		let already_annotations=[];
-		for (let item of items){
-			if (existing_annotations[item.id]){
-				//already_annotations.push(item.name)
-			}
+		let ids=[];	
+		for (let item of items){			
 			ids.push(item.id);
 		}
-		if (already_annotations.length > 0){
-			let a = already_annotations.join(",");
-			let msg = `Intersections for the following annotatoins 
-			already exist:-<br> ${a}`
-			new MLVDialog(msg,{type:"warning"});
-			return;
-		}
-		let data={
-			method:"add_annotation_intersections",
-			args:{
+		let args= {
 				ids:ids,
 				extra_columns:extra_columns
-			}
-		}
-		$.ajax({
-			url:"/meths/execute_project_action/"+this.project_id,
-			dataType:"json",
-			type:"POST",
-			contentType:"application/json",
-			data:JSON.stringify(data)
-		}).done(function(response){
-			 self.checkJob(response.data,ids)
-		});
-		this.waiting_dialog = new WaitingDialog("Calculating Intersections");
-		this.waiting_dialog.wait();
+		}	
+		this.app.initiateJob("annotation_intersection_job",args);
 		
 		
 	}
@@ -1575,6 +1806,97 @@ class AnnotationSetFromProject{
 		this.waiting_dialog.wait();
 		
 		
+	}
+	
+}
+class MLVHistoryDialog{
+	constructor(app){
+		
+		this.div = $("<div>");
+		let self = this;
+		this.app=app;
+		this.app.history_dialog=this;
+		
+	
+		
+	
+		this.div.dialog({
+    		close:function(){
+    			self.app.history_dialog=null;
+    			$(this).dialog("destroy").remove();
+    			
+    		},
+    		title:"History",
+    		autoOpen:true,
+    		height:400,
+    		width:350,
+    		
+    		position:{my:"center top",at:"center top"},
+    		buttons:[    			
+    			{
+    				text:"OK",
+    				click:function(){
+    					$(this).dialog("close");
+    				}
+    			},
+    			
+    		]
+    	
+    	}).dialogFix();
+		this.refresh();
+		
+		
+		
+	}
+	refresh(){
+		this.div.empty();
+		for (let i  in this.app.history){
+			this.addHistory(i,this.app.history[i])
+		}
+	}
+	
+	addHistory(index,history){
+		let self = this;
+		let d=$("<div>").data("index",index).attr("id","div-"+history.id);
+		let hd = $("<div>").appendTo(d);
+		let sp= $("<span>").css({"padding-top":"5px",float:"right"}).appendTo(hd);
+		let ind = parseInt(index)+1;
+		hd.append(`<label>${ind}.${history.label}</label>`);
+		$("<i>").attr("class","far fa-eye").click(function(e){
+			if (id.css("display")==="block"){
+				id.css("display","none");
+			}
+			else{
+				id.css("display","block");
+			}
+			
+		}).appendTo(sp)
+		
+		
+		let cl = "fas fa-spinner fa-spin";
+		if (history.status==="complete"){
+			cl="fas fa-check";
+		}
+		if (history.status==="failed"){
+			cl="fas fa-exclamation"
+		}
+		$("<i>").attr("class",cl).appendTo(sp);
+		if (this.app.permission==="edit"){
+			$("<i>").attr("class","fas fa-times").css({"font-size":"16px","margin-left":"3px"}).click(function(e){
+				self.app.removeAction(history);
+				d.remove();
+			}).appendTo(sp);
+		}
+		
+		
+		
+		
+		let id=$("<pre>").text(history.info).css("display","none")
+		.css({"overflow":"hidden","white-space":"pre-wrap"}).appendTo(d)
+		
+		
+		
+		this.div.append(d);
 	}
 	
 }

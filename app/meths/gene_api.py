@@ -3,6 +3,7 @@ from app.ngs.gene import get_genes as get_gene_region
 from . import meths
 from flask_cors import cross_origin
 from app.ngs.genome import get_genomes as get_all_genomes
+from app import app
 
 @meths.route("/<db>/get_genes/<chr>/<start>/<finish>")
 @cross_origin()

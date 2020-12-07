@@ -461,33 +461,50 @@ class ShareObjectDialog{
 }
 
 function makeObjectPublic(id,name){
-	 $.ajax({
-         url:"/meths/make_object_public/"+id,
-         dataType:"json"
-     })
-     .done(data=>{
-     	let d = $("<div>");
-     	let text=data,msg
-     	if (data.success){
-     	 text=name +" was made public, you can share it with the following link<br>"+data.url
-     	}
-     	d.html(text);
-     	d.dialog({
-             autoOpen: true,
-             width:400,
-             close:()=>{
-             	d.dialog("destroy").remove()
-             },
-             title: "Make "+name+" public",
-            
-         	buttons:[
-         		{
-         			text:"OK",
-         			click:()=>{d.dialog("close")}
-         		}	
-         	]     
-         }).dialogFix();
-     });	
+	let d = $("<div>");
+ 	
+ 	
+ 	d.html("Are you sure you want to make "+ name+" public?");
+ 	
+ 	d.dialog({
+         autoOpen: true,
+         width:400,
+         close:()=>{
+         	d.dialog("destroy").remove()
+         },
+         title: "Make "+name+" public",
+        
+     	buttons:[
+     		{
+     			text:"OK",
+     			click:function(e){
+     				if (!d.data("already")){
+     					 $.ajax({
+     				         url:"/meths/make_object_public/"+id,
+     				         dataType:"json"
+     				     })
+     				     .done(data=>{
+     				    	if (data.success){
+     				    	 	 text=name +" was made public, you can share it with the following link<br>"+data.url
+     				    	}
+     				    	d.data("already",true)
+     				     });
+     				}
+     				else{
+     					d.dialog("close");
+     				}
+     			}
+     		},
+     		{
+     			text:"Cancel",
+     			click:function(e){
+     				d.dialog("close");
+     			}
+     			
+     		}
+     	]     
+     }).dialogFix();
+	
 }
 
 

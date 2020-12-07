@@ -7,9 +7,11 @@ class MLViewBase{
     	this.genome=project.data.genome;
     	this.permission = project.permission;
     	this.project_type=project.type;
-    	this.anno_project_types=[];
+    	this.anno_project_types=["multi_locus_view"];
     	this.update_browser_view=true;
-    	
+    	this.project_description=project.description;
+    	this.genome_info=project.genome_info;
+    	this.history=project.data.history?project.data.history:[];
     	this.setUpSplit(div);
     	
     	this.waiting_icon= new WaitingIcon("mlv-table");
@@ -19,30 +21,60 @@ class MLViewBase{
     	
     	let self =this;
     	
-    	let data={
-    		method:"get_viewset",
-    		args:{}
-    	}
-    	
+    	let args = {offset:0,limit:20000}
 		if (config.filters){
-			data.args.filters=config.filters;
+			args.filters=config.filters;
 		}
     	this.table_mode="table";
-    	$.ajax({
-		    url:"/meths/execute_project_action/"+project_id,
-		    dataType:"json",
-		    contentType:"application/json",
-		    data:JSON.stringify(data),
-		    type:"POST"
-		}).done(function(response){
-			self.parseData(project,response.data);
-			 self.setUpTracks(project.data,response.data);
-			 if (self.config.graphs){
-				 self.setUpFilterPanel(response.data,project.data);
-			 }
-			 self.setUpTable(response.data,project.data,config);
+    	this.time_started = new Date().getTime();
+    	this.sendAction("get_viewset",args).done(function(response){
+			response.data.project=project;
+			self.loadInData(response.data)
 		}); 	
     
+	}
+	
+	loadInData(data){
+		let self=this;
+		if (data.total){
+			this.temp_data=data
+		}
+		else{
+			this.temp_data.views = this.temp_data.views.concat(data);
+		}
+		if (this.temp_data.views.length == this.temp_data.total){
+			console.log("time taken:"+(new Date().getTime()-this.time_started))
+			this.waiting_icon.changeMessage("Loaded "+ this.temp_data.total+" / "+this.temp_data.total);
+			let p =this.temp_data.project;
+			this.parseData(p,this.temp_data);
+			this.setUpTracks(p.data,this.temp_data);
+			 if (self.config.graphs){
+				 self.setUpFilterPanel(this.temp_data,p.data);
+			 }
+			 self.setUpTable(this.temp_data,p.data,this.config);
+			 this.temp_data=null;
+			 for (let h of this.history){
+				 if (h.job_id && h.status){
+					 if (h.status !== "complete" && h.status !=="failed"){
+						 this.checkJobStatus(h.job_id)
+					 }
+				 }
+				 
+			 }
+			
+		}
+		else{
+			let args= {offset:this.temp_data.views.length,limit:20000};
+			if (this.config.filters){
+				args.filters=config.filters;
+			}
+			this.waiting_icon.changeMessage("Loaded "+ this.temp_data.views.length+" / "+this.temp_data.total);
+			this.sendAction("get_viewset",args).done(function(response){
+				
+				self.loadInData(response.data)
+			}); 	
+		}
+		
 	}
 	
 	parseData(){}
@@ -164,8 +196,12 @@ class MLViewBase{
 			});
 		this.browser.addToMenu(op);
 		this.browser.addToMenu(sel);
-		this.browser.panel.addListener("track_removed",function(c){
-			self._saveState();
+		this.browser.panel.addListener("track_removed",function(config){
+			self.trackRemoved(config);
+		});
+		
+		this.browser.panel.addListener("track_added",function(config){
+			self.trackAdded(config);
 		})
 		
 		
@@ -185,6 +221,124 @@ class MLViewBase{
     		
     	
     }
+	
+	trackAdded(config){
+		if (this.permission !=="edit"){
+			return;
+		}
+		let history={
+				label:`Add ${config.short_label} Track`,
+				info:`url: ${config.url}`,
+				id:config.track_id,
+				tracks:[config.track_id],
+				graphs:[],
+				fields:[],
+				status:"complete"		
+		}
+		this.history.push(history);
+    	if (this.history_dialog){
+    		this.history_dialog.refresh();
+    	}
+    	let args= {
+    		item:config,
+    		history:history,
+    		type:"track",
+    		action:"add"
+    					
+    	}
+    	this.sendAction("add_remove_item",args)
+		
+	}
+	
+
+	
+	chartAdded(config,info){
+		if (this.permission !=="edit"){
+			return;
+		}
+		let fields  = info.fields.join(",")
+		let history= {
+				label:`Added ${info.type} chart`,
+				info:"Fields: "+fields+"\nName: "+config.title,
+				graphs:[config.id],
+				id:config.id,
+				tracks:[],
+				fields:[],
+				status:"complete"
+		}
+		let args={
+			item:config,
+			type:"graph",
+			action:"add",
+			history:history
+		}
+		this.history.push(history);
+    	if (this.history_dialog){
+    		this.history_dialog.refresh();
+    	}
+		this.sendAction("add_remove_item",args);
+		
+	}
+	
+	trackRemoved(config){
+		if (this.permission !=="edit"){
+			return;
+		}
+		for (let i in this.history){
+			let h= this.history[i];
+			if (h.id === config.track_id){
+				this.removeAction(h);
+				return;
+			}
+		}
+	
+		let args={
+				item:config,
+				type:"track",
+				action:"remove"
+		}
+		this.sendAction("add_remove_item",args)
+				
+	}
+	
+	updateHistory(history){
+		let index=-1;
+		for (let i in this.history){
+			if (this.history[i].id===history.id){
+				index=i;
+				break;
+			}
+		}
+		if (index!==-1){
+			this.history[index]=history;
+		
+			if (this.history_dialog){
+				this.history_dialog.refresh();
+			}
+		}
+	}
+	
+	chartRemoved(config){
+		if (this.permission !=="edit"){
+			return;
+		}
+	
+		for (let i in this.history){
+			let h= this.history[i];
+			if (h.id === config.id){
+				this.removeAction(h);
+				return;
+			}
+		}
+	
+		let args={
+				item:config,
+				type:"graph",
+				action:"remove"
+		}
+		this.sendAction("add_remove_item",args)
+		
+	}
 	
 	addMainTrackInteraction(data,click_func){
 		let ft = this.browser_config.feature_track;
@@ -250,70 +404,77 @@ class MLViewBase{
     	
 	}
 	
-    showCreateSubsetDialog(){
+    showCreateSubsetDialog(all){
     	let self = this
-    	let div =  $("<div>")
+    	let div =  $("<div>");
+    	let title = all?"Save As":"Create Subset";
     	this.subset_dialog = div
     	.dialog({
     		close:function(){
     			$(this).dialog("destroy").remove();
     			self.subset_dialog=null;
     		},
-    		title:"Create Subset"
+    		title:title
     	}).dialogFix();
     
     	let num= this.table.data_view.getLength();
     	
-    
-		let sp = $("<input id='subset-region-number'>").width(60);
-	
-	
-		$("<input>").attr({type:"radio",name:"subset-choice",value:"subset","checked":true}).appendTo(div);
-		div.append("<span>From "+num+" filtered regions</span><br>");
-		$("<input>").attr({type:"radio",name:"subset-choice",value:"random"}).appendTo(div);
-		div.append("<span>From</span>").append(sp).append(" random regions");
-		sp.spinner({
-			min:100,
-			max:5000,
-			step:100 
-		}).val(100);
-		let f_d = $("<div>").appendTo(div)
+        if (!all){
+			let sp = $("<input id='subset-region-number'>").width(60);
+		
+		
+			$("<input>").attr({type:"radio",name:"subset-choice",value:"subset","checked":true}).appendTo(div);
+			div.append("<span>From "+num+" filtered regions</span><br>");
+			$("<input>").attr({type:"radio",name:"subset-choice",value:"random"}).appendTo(div);
+			div.append("<span>From</span>").append(sp).append(" random regions");
+			sp.spinner({
+				min:100,
+				max:5000,
+				step:100 
+			}).val(100);
+			
+        }
+		let f_d = $("<div>").appendTo(div);
+		let bt = all?"Save":"Create";
+		let na = all?this.project_name+" (1)":this.project_name+" subset";
 		this.subset_form = new NameDescGenomeForm(f_d,this.project_type,
     			function(pid){
-    				self.createSubset(pid);
+    				self.createSubset(pid,all);
     			},
-    			{genome:this.genome,name:this.project_name+" subset",desc:"Created from "+this.project_name}
+    			{button_text:bt,genome:this.genome,name:na,desc:"Created from "+this.project_name}
     	);
     }
     
-    createSubset(project_id){
+    createSubset(project_id,all){
     	let chosen_ids=[];
     	let self = this;
-    	let option = $("input[name='subset-choice']:checked").val();
-    	if (option === "random"){
-    		let id_list=[];
-        	let data = this.table.data_view.getItems(); 
-        	for (let item of data){
-        		id_list.push(item.id);
-        		
-        	}
-        	let num = $("#pad-peak-number").val();
-        	for (let i=0;i<num;i++){
-        		let index = Math.floor(Math.random() * id_list.length);
-        		chosen_ids.push(id_list[index]);
-        		id_list.splice(index,1);
-        		if (id_list.length===0){
-        			break;
-        		}
-        		
-        	}
-    	}
-    	else{
-    		
-    		for (let item of this.table.data_view.getFilteredItems()){
-    			chosen_ids.push(item.id);
-    		}
-    		
+    	if (!all){
+	    	let option = $("input[name='subset-choice']:checked").val();
+	    	if (option === "random"){
+	    		let id_list=[];
+	        	let data = this.table.data_view.getItems(); 
+	        	for (let item of data){
+	        		id_list.push(item.id);
+	        		
+	        	}
+	        	let num = $("#pad-peak-number").val();
+	        	for (let i=0;i<num;i++){
+	        		let index = Math.floor(Math.random() * id_list.length);
+	        		chosen_ids.push(id_list[index]);
+	        		id_list.splice(index,1);
+	        		if (id_list.length===0){
+	        			break;
+	        		}
+	        		
+	        	}
+	    	}
+	    	else{
+	    		
+	    		for (let item of this.table.data_view.getFilteredItems()){
+	    			chosen_ids.push(item.id);
+	    		}
+	    		
+	    	}
     	}
     	let data ={
     			method:"create_subset_from_parent",
@@ -334,8 +495,12 @@ class MLViewBase{
     			$("#pad-information").html(response.msg)
     		}
     		else{
+    			let wt = "Creating Subset";
+    			if (all){
+    				wt= "Saving Project";
+    			}
     			self.subset_dialog.dialog("close");
-    			self.subset_waiting_dialog=new WaitingDialog("Creating Subset");
+    			self.subset_waiting_dialog=new WaitingDialog(wt);
     			self.subset_waiting_dialog.wait();
     			self.checkSubsetCreation(project_id);
     		
@@ -378,7 +543,8 @@ class MLViewBase{
     	let self=this;  	
     	this.filter_panel=new FilterPanel("filter-panel",data.views,{
     		menu_bar:this.config.graphs.menu_bar,
-    		graphs:project_data.graph_config
+    		graphs:project_data.graph_config,
+    		exclude_graph_types:["heat_map","time_line_chart"]
     	});
     	this.initialiseFilterPanel(data,project_data);
     
@@ -501,15 +667,15 @@ class MLViewBase{
 		    	}
 				self.table.showDownloadDialog(columns);
 			});
-    	if (this.permission === "edit"){
-    		$("<i class='fas fa-save'></i>")
+    	this.setupSaveContextMenu(this.permission);
+    	$("<i class='fas fa-save'></i>")
 	  			.css({"font-size":"18px"})
-	  			.attr({title:"Save Layout","data-toggle":"tooltip"})
+	  			.attr({title:"Save","data-toggle":"tooltip"})
 	  			.appendTo(menu_div)
 	  			.click(function(e){
-	  				self._saveState(true);
-	  			});
-    	}
+	  				self.save_context_menu.show(null,e);
+	  	});
+    	
     	
     	if (this.config.create_subset && this.permission!=="view_no_log_in"){
     		$("<i class='fas fa-clone'></i>")
@@ -573,19 +739,13 @@ class MLViewBase{
 			.click(function(e){
 				new MLVPeakStatsDialog(self,ps_icon);   	
 			});
-			
-			let info = project_data.peak_stats_job_status;
-			if (info){
-				if (info!=="complete" && info !=="failed"){
-						this.calculatingPeakStats(project_data.peak_stat_job_id,ps_icon)
-					}
-				}
+					
 		}
     	
     	if (this.config.cluster_on_columns && this.permission==="edit"){
     		let ps_icon= $("<i class='fab fa-cloudsmith'></i>");
     		
-			ps_icon.css("font-Filteredsize","18px")
+			ps_icon.css("font-size","18px")
 			.attr({title:"Cluster on Columns","data-toggle":"tooltip",id:"cluster_by_fields_job"})
 			.appendTo(menu_div)
 			.click(function(e){
@@ -600,6 +760,28 @@ class MLViewBase{
 			
 		
 		}
+    	
+    	let ps_icon= $("<i class='fas fa-info-circle'></i>");
+		
+		ps_icon.css("font-size","18px")
+		.attr({title:"Project/Genome Information","data-toggle":"tooltip"})
+		.appendTo(menu_div)
+		.click(function(e){
+			new MLVProjectInfoDialog(self.project_name,self.project_description,self.genome_info);   	
+		});
+		
+		
+		ps_icon= $("<i class='fas fa-history'></i>");
+		
+		ps_icon.css("font-size","18px")
+		.attr({title:"Project History","data-toggle":"tooltip"})
+		.appendTo(menu_div)
+		.click(function(e){
+			new MLVHistoryDialog(self);   	
+		});
+		
+		
+		
     		
     	
     	
@@ -620,22 +802,28 @@ class MLViewBase{
 			});
     		}
     	}
-    	else{
+    	if (this.permission==="edit"){
     	    
         	let icon =$("<i class='far fa-images'></i>")
     		.css("font-size","18px")
     			.appendTo(menu_div)
     			.attr({title:"Create Images","data-toggle":"tooltip"})
     			.click(function(e){
-    				let row = self.table.getTopVisibleItem();
-    				let a =new CreateUCSCImages(self.project_id,self.table,self.browser);
-    				a.setCallback(function(jid){self.creatingImages(jid,icon)})
+    				new CreateUCSCImages(self);
+    				
     			});
-        	if (project_data.creating_images_job_status==="running"){
-        		this.creatingImages(project_data.creating_images_job_id,icon)
         	
-        		
-        	}
+        	this.setupShareMenu(this.permission);
+        	$("<i class='fas fa-share'></i>")
+    		.css("font-size","18px")
+    			.appendTo(menu_div)
+    			.attr({title:"Share Project","data-toggle":"tooltip"})
+    			.click(function(e){
+    				self.share_context_menu.show(null,e);
+    				
+    			});
+        	
+        	
         }
 
     	
@@ -686,6 +874,12 @@ class MLViewBase{
     	if (this.filter_panel){
     		this.filter_panel.setColumns(this.columns);
     		dv = new FilterPanelDataView(this.filter_panel);
+    		this.filter_panel.addAddListener(function(config,info){
+    			self.chartAdded(config,info);
+    		});
+    		this.filter_panel.addRemoveListener(function(config,info){
+    			self.chartRemoved(config);
+    		});
     		
     	}
     	else{
@@ -693,6 +887,25 @@ class MLViewBase{
     	}
     	
     	this.waiting_icon.hide();
+    	
+    	if (project_data.table_config){
+    		let ci = project_data.table_config.col_info;
+    		if (ci){
+    			for (let c of table_columns){
+    				if (ci[c.field]){
+    					c.order=ci[c.field].order;
+    					c.width=ci[c.field].width
+    				}
+    				else{
+    					c.order=1000;
+    				}
+    			}
+    			table_columns.sort(function(a,b){
+    				return a.order-b.order;
+    			})
+    		}
+    		
+    	}
     	
     	this.table = new MLVTable("the-table-div",table_columns,dv);
     	if (project_data.has_images){
@@ -748,6 +961,8 @@ class MLViewBase{
 	
 	addToTableMenu(div){
 	}
+	
+
 	
 	
 	init(response,project_data){
@@ -829,7 +1044,7 @@ class MLViewBase{
 				{
 					text:"Create Column",
 					func:function(){
-						new CreateCompoundColumn(self);
+						new EquationBuilderDialog(self);
 					},
 					icon:"fas fa-plus"
 				},
@@ -847,20 +1062,10 @@ class MLViewBase{
 	
 	
     setupAnnoContextMenu(permission){
-
 	    	
     	if (permission==="edit"){
-    		this.add_annotations= new AddAnnotations(project_id,this.genome,
-    				function(data){
-	    					self.addAnnotations(data);
-	    			},this.anno_project_types);
+    		this.add_annotations= new AddAnnotations(this,this.anno_project_types);
 	    }
-    	if (this.annotations){
-    		if (Object.keys(this.annotations).length===0){
-    			this.annotations=null;
-    		}
-    	}
-    	
     	
     	let self = this;
     	this.anno_context_menu = new MLVContextMenu(
@@ -872,7 +1077,8 @@ class MLViewBase{
     						func:function(){
     							self.createAnnotationSet();
     						},
-    						icon:"fas fa-plus-circle"
+    						icon:"fas fa-plus-circle",
+    						ghosted:permission==="view_no_log_in"
     					},
     					{
     						text:"Annotation Intersect ",
@@ -881,27 +1087,80 @@ class MLViewBase{
     						},
     						icon:"fas fa-stream",
     						ghosted:permission!=="edit"
-    					},
-    					{
-    						func:function(){
-    							new RemoveAnnotationsDialog(self.annotations,self.project_id,
-    									function(success,ids){
-    										self.annotationsRemoved(success,ids);
-    									}
-    							);
-    						},
-    						text:"Remove Intersection",
-    						icon:"fas fa-trash",
-    						ghosted:permission!=="edit" || !(self.annotations)
-    						
     					}
-    					
     				];		
-    			
-    		
+    				
     		}
     	)
     }
+    
+    
+    setupShareMenu(permission){
+		let self = this;
+		this.share_context_menu=new MLVContextMenu(function(data){
+			return [
+				
+				{
+					text:"Share",
+					
+					func:function(){
+						new ShareObjectDialog(self.project_id,self.project_name)
+					},
+					icon:"fas fa-share",
+					ghosted:permission !=="edit"
+				
+				},
+				{
+					text:"Make Public",
+					
+					func:function(){
+						 makeObjectPublic(self.project_id,self.project_name);
+					},
+					icon:"fas fa-globe",
+					ghosted:permission !== "edit"
+				
+				}
+								
+				
+				];
+		})	
+	}
+	
+    
+    
+    setupSaveContextMenu(permission){  	
+    	
+    	let self = this;
+    	this.save_context_menu = new MLVContextMenu(
+    		function(data){
+    			
+    				return [
+    					{
+    						text:"Save Layout",
+    						func:function(){
+    							self._saveState(true);
+    						},
+    						icon:"fas fa-digital-tachograph",
+    						ghosted:permission!=="edit"
+    					},
+    					{
+    						text:"Save As ",
+    						func:function(){
+    							self.showCreateSubsetDialog(true);
+    						},
+    						icon:"fas fa-save",
+    						ghosted:permission==="view_no_log_in"
+    					}
+    				];		
+    				
+    		}
+    	)
+    }
+    
+    
+    
+    
+    
     
     setupTableFormatMenu(){
     	let self = this;
@@ -977,29 +1236,60 @@ class MLViewBase{
 		});
 	}
 	
-	removeColumns(fields){
+	removeColumns(fields,not_update){
+		this.table.removeColumns(fields);
 		
-		let table_columns=[];
 		let this_columns=[];
-		for (let col of this.table.grid.getColumns()){
-			if (fields.indexOf(col.field)===-1){
-				table_columns.push(col)
-			}
-		}
+	
 		for (let col of this.columns){
 			if (fields.indexOf(col.field)===-1){
 				this_columns.push(col)
 			}
 		}
 		this.columns=this_columns;
-		this.table.grid.setColumns(table_columns);
-		this.table.updateGroupPanel();
+	
 		if (this.filter_panel){
 			for (let f of fields){
 				this.filter_panel.removeField(f);
+				
 			}
 		}
-		this._saveState();
+		if (!not_update){
+			this._saveState();
+		}
+		
+	}
+
+	removeAction(item){
+		this.sendAction("delete_history_item",{history_id:item.id});
+		if (item.graphs){
+			for (let ch of item.graphs){
+				this.filter_panel.removeChart(ch,true)
+			}
+		}
+		if (item.tracks){
+			for (let tr of item.tracks){
+				this.browser.panel.removeTrack(tr,true,true);
+			}
+		}
+		this.browser.panel.update();
+		if (item.fields){
+			this.removeColumns(item.fields,true);
+		}
+		//this.browser.panel.update();
+		let index=-1;
+		for (let i in this.history){
+			if (this.history[i].id ===item.id){
+				index=i
+			}
+		}
+		this.history.splice(index,1);
+		if (this.history_dialog){
+			this.history_dialog.refresh();
+		}
+	
+		
+		
 	}
 	
 	
@@ -1145,10 +1435,10 @@ class MLViewBase{
 	    	}
     	}
     	for (let track of data.tracks){
-    		this.main_panel.addTrack(track,0)
+    		this.main_panel.addTrack(track,0,true)
     	}
     	for (let wig of data.wigs){
-    		this.main_panel.addTrack(wig)
+    		this.main_panel.addTrack(wig,null,true)
     	}
     	this.main_panel.update();
     	this._saveState();
@@ -1175,7 +1465,8 @@ class MLViewBase{
 		}
 		let table_config={
 				format:this.table_mode,
-				sort_cols:this.table.getSortColumns()
+				sort_cols:this.table.getSortColumns(),
+				col_info:this.table.getColumnInfo()
 				
 				
 		}
@@ -1220,7 +1511,7 @@ class MLViewBase{
     	}).css("border-right","3px").appendTo(div);
     	$("<label>").attr({
 			"for":"tss-GO-annotations"
-			}).text("Include GO annoations").appendTo(div);
+			}).text("Include GO annotations").appendTo(div);
     	div.append("<br>");
     	$("<label>").attr({
 			"for":"tss-GO-levels"
@@ -1246,25 +1537,12 @@ class MLViewBase{
     				if ($("#tss-GO-annotations").prop("checked")){
     					go_levels=parseInt(sel.val());
     				}
-    				
-    				self.sendAction("find_tss_distances",{go_levels:go_levels}).done(function(resp){
-    					if (resp.success){
-    						let wd=new WaitingDialog("Finding TSS Distances");
-    						wd.wait("")
-    						self.checkJobRunning("find_tss_distances_job_id","TSS",function(success){
-    							self.addDataToView(wd,"get_tss_distances","TSS distances have been calculated");
-    						})
-    					}else{
-    						console.log(resp.msg)
-    					}
-            		
-        			});
-    			
+    				 				
+    				self.initiateJob("find_tss_distances_job",{go_levels:go_levels});
 
-    			}
-    		
-    		}	 	 	
-    		})
+     			}	 	 	
+    		}
+    	});
     }
    
     
@@ -1297,6 +1575,7 @@ class MLViewBase{
     	
     }
     _addDataToView(data){
+    	
     	for (let col of data.columns){
     		this.columns.push(col)
     	}
@@ -1309,13 +1588,22 @@ class MLViewBase{
     		}		
     	}
     	this.table.addColumns(data.columns);
+    	this.table.updateGroupPanel();
     	this.filter_panel.setColumns(this.columns);
-    
-    	for (let graph of data.graphs){
-    		this.filter_panel.addChart(graph);
+    	if (data.graphs){
+    		for (let graph of data.graphs){
+    			this.filter_panel.addChart(graph,true);
     	
+    		}
     	}
-    	this._saveState();
+    	if (data.tracks){
+    		for (let track of data.tracks){
+        		this.main_panel.addTrack(track,null,true)
+        	}
+        	this.main_panel.update();
+    	}
+    	
+    	//this._saveState();
     }
     
     setTableFormat(type){
@@ -1362,15 +1650,127 @@ class MLViewBase{
 
     }
     
+    jobSent(history){
+    	this.history.push(history);
+    	if (!this.history_dialog){
+    		new MLVHistoryDialog(this);
+    	}
+    	this.history_dialog.refresh();
+    	this.checkJobStatus(history.job_id)
+    }
+
+	
+	jobComplete(job_data){
+		if (job_data.status==="complete"){
+			if (job_data.history && job_data.history.images){
+				let msg =`All the images have been generated, please refresh the page
+				to see the results`;
+				new MLVDialog(msg,{type:"success"})
+			}
+			else{
+				this._addDataToView(job_data);
+				let msg= `The ${job_data.history.label} has completed<br>
+			          The appropriate columms/tracks/graphs have been added`;
+				new MLVDialog(msg,{type:"success",title:"Job Complete"});
+			}
+			
+		
+		}
+		else{
+			new MLVDialog("The Peaks Stats Job has failed. Please contact an administrator",{type:"danger"});
+			
+		}
+		this.updateHistory(job_data.history);
+		
+	}
+	
+	
+	initiateJob(job_type,args,msg){
+		let self = this;
+		this.sendAction("initiate_job",{job:job_type,inputs:args}).done(function(resp){
+			if (resp.success){
+				self.jobSent(resp.data);
+			}
+			else{
+				new MLVDialog("The job could not be run. Please contact an administrator",{type:"danger"});
+			}
+			
+		})
+	}
+	
+	
+    
+    checkJobStatus(job_id){
+		let self = this;
+    	this.sendAction("check_job_finished",{job_id:job_id}).done(function(resp){
+    		if (resp.success){
+    			if (resp.data.status=="complete" || resp.data.status==="failed"){
+    				self.jobComplete(resp.data);		
+    			}
+    			else{
+    				setTimeout(function(){
+    					self.checkJobStatus(job_id);
+    				},30000)
+    				
+    			}
+    			
+    		}
+    		
+    	});
+    }
+    
     calculatingPeakStats(job_id,icon){
+    	let self=this;
     	icon.addClass("mlv-animate-flicker").attr("title","Peak Stats are being calculated").off();
-		this.checkJobRunning(job_id,"Create Images");
+		this.checkJobRunning(job_id,"Create Images",function(status){
+			if (status==="failed"){
+				new MLVDialog("The Peaks Stats Job has failed. Please contact an administrator",{type:"error"});
+				return;
+			}
+			self.sendAction("get_bw_stats_data",{job_id:job_id}).done(function(resp){
+				if (resp.success){
+					self._addDataToView(resp.data);
+					new MLVDialog("The Peak Stats Job has completed and the appropriate columms/tracks have been added",{type:"success"});
+					icon.removeClass("mlv-animate-flicker").attr("title","Calculate Peak Stats");
+				}else{
+					new MLVDialog("The Peaks Stats Job has failed. Please contact an administrator",{type:"error"});
+				}
+    		
+			});
+			
+			
+			
+			
+		});
     }
     
     clusteringByFields(job_id){
-    	$("#cluster_by_fields_job").addClass("mlv-animate-flicker").attr("title","Peak Stats are being calculated").off();
-    	this.checkJobRunning(job_id,"Cluster on Fields");
+    	let self=this;
+    	$("#cluster_by_fields_job").addClass("mlv-animate-flicker").attr("title","Clustering").off();
+    	this.checkJobRunning(job_id,"Cluster on Fields",function(status){
+			if (status==="failed"){
+				new MLVDialog("The Cluster By Fields Job has failed. Please contact an administrator",{type:"error"});
+				return;
+			}
+			self.sendAction("get_cluster_data",{job_id:job_id}).done(function(resp){
+				if (resp.success){
+					self._addDataToView(resp.data);
+					new MLVDialog("The Clustering Job has completed and the appropriate columms/graphs have been added",{type:"success"});
+					$("#cluster_by_fields_job").removeClass("mlv-animate-flicker").attr("title","Cluster By Fields");
+				}else{
+					new MLVDialog("The Cluster By Fields job has failed. Please contact an administrator",{type:"error"});
+				}
+    		
+			});
+			
+			
+			
+			
+		});
     }
+    
+    
+    
     
     checkJobRunning(tag,name,callback){
     	let self = this

@@ -7,6 +7,8 @@
 from datetime import datetime
 import os
 import jinja2
+import matplotlib
+matplotlib.use('agg')
 from flask import Flask
 from flask_mail import Mail
 from flask_migrate import Migrate, MigrateCommand
@@ -31,6 +33,7 @@ migrate = Migrate()
 databases={}
 modules={}
 app = Flask(__name__)
+module_methods={}
 
 
 def create_app(config = None,extra_config_settings={},min_db_connections=1):
@@ -143,12 +146,27 @@ def load_module(app,module_folder):
     module_name=os.path.split(module_folder)[1]
     config_file = os.path.join(module_folder,"config.json")
     config = ujson.loads(open(config_file).read())
+    module_info={}
+    is_private = config.get("is_private",False)
+    module_info["is_public"]= not is_private
     for project in config["projects"]:
         app.config["MLV_PROJECTS"][project["name"]]=project
+        if is_private:
+            project["is_public"]=False
         import_path= "app.modules.{}.projects.{}".format(module_name,project["name"])
         importlib.import_module(import_path)
      
     jobs = config.get("jobs")
+    
+    
+    #load in any views
+    viewfile=os.path.join(module_folder,"views.py")
+    if os.path.exists(viewfile):
+        import_path="app.modules.{}.views".format(module_name)
+        importlib.import_module(import_path)
+        
+        
+    
     if jobs:
         for job in jobs:
             import_path="app.modules.{}.jobs.{}".format(module_name,job["name"])
@@ -162,6 +180,7 @@ def load_module(app,module_folder):
     if app_config:
         for key in app_config:
             app.config[key]=app_config[key]
+    app.config["MODULE_INFO"][module_name]=module_info
 
 def load_loggers(app):
     root = Path(app.root_path).parent

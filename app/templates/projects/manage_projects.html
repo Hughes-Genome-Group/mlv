@@ -1,0 +1,60 @@
+{% extends "common/page_base.html" %}
+{% block stylesheets %}
+    {{ super() }}
+   
+
+{% endblock %}"
+
+{% block outercontent %}
+ {% if current_user.is_authenticated %}
+ <div class ="row">
+ 	<div class = "col col-6">
+   		<div class= "card mlv-main-card">
+      		<div class = "card-header bg-info">
+      			<h5>My Models</h5>
+      			<button class ="btn btn-sm btn-secondary" id="refresh-table-buttton">Refresh</button>
+      		</div>
+        	<div id="model-table" class = "card-body"></div>
+    	</div>
+ 	</div>
+ 	<div  class="col col-6">
+		<div class= "card mlv-main-card">
+      		<div class = "card-header bg-info">
+      			<h5>Create Model From Peak Analysis</h5>
+      			<button class ="btn btn-sm btn-secondary" id="reset-create-button">Reset</button>
+      		</div>
+        	<div id="create-model-container" class = "card-body">
+        	
+        		<div class='row'>
+        			<div id='create-left-column' class = "col col-6"></div>
+        			<div id='create-right-column' class = "col col-6"></div>
+        		</div>
+        	</div>
+    	</div>
+ 	</div>
+ </div>
+ {% else %}
+   <div class= 'alert alert-warning'> You need  to
+   		<a  href = "{{url_for('user.login')}}?next={{request.url}}"> log in </a> to create or manage classification models
+   </div>
+
+{% endif %}
+
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/mlv/dataview/ciview.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script src="{{ url_for('static', filename='js/mlv/tables/project_chooser_dialog.js')}}?version={{config['JS_VERSION']}}"></script>
+  	
+    <script>
+    	var is_admin = "{{current_user.administrator}}";
+    	$(function(){
+    		var pm = new ProjectManagementTable("model-table","classification_model");
+    	})
+    
+    </script>
+    
+{% endblock %}

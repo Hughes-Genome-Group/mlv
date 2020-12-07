@@ -124,7 +124,19 @@ class User(db.Model, UserMixin):
             perm = Permission(user_id=self.id,permission="create_project_type",value=project_type)
             db.session.add(perm)
             db.session.commit()
+            
+    def add_permission(self,permission,value):
+           if not self. has_permission(permission,value):
+                perm = Permission(user_id=self.id,permission=permission,value=value)
+                db.session.add(perm)
+                db.session.commit()
         
+            
+    def add_view_permission(self,project_type):
+        if not self. has_permission("view_project_type",project_type):
+            perm = Permission(user_id=self.id,permission="view_project_type",value=project_type)
+            db.session.add(perm)
+            db.session.commit()
         
     @staticmethod
     def get_create_permissions(user,genome):

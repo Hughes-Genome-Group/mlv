@@ -14,6 +14,7 @@ from app.zegami.lib import (
 
 
 
+
 def count_dir(dir):
 # counts number of files in a directory
     count = 0
@@ -83,16 +84,25 @@ def create_collection(name,desc,tsv_file,image_column,job=None,project=None,cred
     join_ds = client.create_join(
         "Join for " + name, imageset_id, dataset_id, join_field=image_column)
     collection['join_dataset_id'] = join_ds['id']
+    
+    project= None
+    if credentials:
+        project = credentials["project"]
+    else:
+        project = info["PROJECT"]
 
     # send our complete collection to zegami
-    client.update_collection(collection['id'], collection)
+    try:
+        client.update_collection(collection['id'], collection)
+    except:
+        pass
 
   
-    url = "https://zegami.com/collections/{}-{}".format(info['PROJECT'],collection['id'])
+    url = "https://zegami.com/collections/{}-{}".format(project,collection['id'])
     return url,collection["id"]
     
 
-def upload_images(image_dir,collection_id,job=None,project=None,from_count=0,credentials=None):
+def upload_images(image_dir,collection_id,job=None,project=None,from_count=0,credentials=None,retries=3):
     '''Uploads images to an exisitng collection
     Args:
         image_dir(str): The full path of the directory containing the images
@@ -119,8 +129,18 @@ def upload_images(image_dir,collection_id,job=None,project=None,from_count=0,cre
         full_path = image_dir + "/" + filename
         if os.path.isfile(full_path):
             print(count,")",filename)
-            with open(os.path.join(image_dir, filename), 'rb') as f:
-                client.upload_png(imageset_id, filename, f)
+            success=True
+            for n in range (0,retries):
+                try:
+                    with open(os.path.join(image_dir, filename), 'rb') as f:
+                        client.upload_png(imageset_id, filename, f)
+                except :
+                    success=False
+                    if n==retries-1:
+                        raise
+                if success:
+                    break
+                
             count = count + 1
             if count%200 ==0:
                 if job:

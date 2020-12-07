@@ -1,0 +1,233 @@
+{% extends "common/page_base.html" %}
+{% block stylesheets %}
+    {{super() }}
+     <link href="/multi_experiment_view/static/data_view.css?version={{config['JS_VERSION']}}" rel="stylesheet">
+ 
+
+{% endblock %}
+
+
+{% block outercontent %}
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        <a href="#datasets" class="mev-nav-link nav-link active" data-toggle="tab">Data Sets</a>
+    </li>
+    <li class="nav-item">
+        <a href="#groups" class="mev-nav-link nav-link" data-toggle="tab">Pseudobulks</a>
+    </li>
+</ul>
+<div class ="tab-content">
+	<div class="tab-pane fade show active" id="datasets">
+		<h3>DataSets<button class="btn btn-sm btn-primary mev-view-button" id ="create-data-set">New Data Set</button></h3>
+		<div class ="card-deck" >
+		{% for exp in experiment %}
+			<div class ="card mev-card mev-experiment-card" id="experiment-{{exp['id']}}">
+				<div class = "card-header">
+					<h5 style="display:inline-block">{{exp['name']}}</h5>
+					{% if exp['is_mine'] %}
+					    <i class="fas fa-share mev-share" id="share-{{exp['id']}}"></i>
+					    <i class="fas fa-globe mev-public" id="public-{{exp['id']}}"></i>
+					{% endif %}
+				</div>
+				<div class ="card-block">
+					<div class="row">
+						<div class = "col-lg-6 mev-card-description">
+							{{exp['description']}}
+						</div>
+						<div class="col-lg-6">
+							<div class= "list-group">
+								{% for item in exp['details'] %}
+								<li class ="list-group-item">
+									<i class="{{item[0]}}"></i>{{item[2]}}
+								</li>
+								{% endfor %}
+							
+							</div>
+						
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+		</div>
+		<h4><span id="data_view-title">Views</span><button class="btn btn-sm btn-primary mev-view-button" id ="create-data-view">New View</button></h4>
+		<div class ="card-deck" >
+		{% for exp in data_view %}
+			<div class ="card mev-card mev-view-card mev-data_view-card mev-data_view-card-{{exp['exp_id']}}" id="data_view-{{exp['id']}}">
+				<div class = "card-header">
+					<h5>{{exp['name']}}</h5>
+				</div>
+				<div class ="card-block">
+					<div class="row">
+					<div class = "col-lg-6 mev-card-description">
+							{{exp['description']}}
+						
+						
+						</div>
+						<div class="col-lg-6">
+							<div class= "list-group">
+								{% for item in exp['details'] %}
+								<li class ="list-group-item">
+									<i class="{{item[0]}}"></i>{{item[2]}}
+								</li>
+								{% endfor %}
+							
+							</div>
+							
+						
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+		</div>			
+	</div>
+	
+	
+	<div class="tab-pane fade" id="groups">
+		<h3>Pseudobulks</h3>
+		<div class ="card-deck" >
+		{% for exp in experiment_group %}
+			<div class ="card mev-card mev-group-card" id="group-{{exp['id']}}">
+				<div class = "card-header">
+					<h5>{{exp['name']}}</h5>
+				
+				</div>
+				<div class ="card-block">
+					<div class="row">
+						<div class = "col-lg-6 mev-card-description">
+							{{exp['description']}}
+						
+						
+						</div>
+						<div class="col-lg-6">
+							<div class= "list-group">
+								{% for item in exp['details'] %}
+								<li class ="list-group-item">
+									<i class="{{item[0]}}"></i>{{item[2]}}
+								</li>
+								{% endfor %}
+							
+							</div>
+							<div><i class="fas fa-flask"></i>Data Sets</div>
+							<div class= "list-group">
+								{% for item in exp['experiments'] %}
+								<li class ="list-group-item">
+									{{item}}
+								</li>
+								{% endfor %}
+							
+							</div>
+						
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+		</div>
+		<h4><span id="group_view-title">Views</span> <button class="btn btn-sm btn-primary mev-view-button" id ="create-group-view">New View</button></h4>
+		<div class ="card-deck" >
+		{% for exp in group_view %}
+			<div class ="card mev-card mev-view-card mev-group_view-card mev-group_view-card-{{exp['group_id']}}" id="group_view-{{exp['id']}}">
+				<div class = "card-header">
+					<h5>{{exp['name']}}</h5>
+				</div>
+				<div class ="card-block">
+					<div class="row">
+					<div class = "col-lg-6 mev-card-description">
+							{{exp['description']}}
+						
+						
+						</div>
+						<div class="col-lg-6">
+							<div class= "list-group">
+								{% for item in exp['details'] %}
+								<li class ="list-group-item">
+									<i class="{{item[0]}}"></i>{{item[2]}}
+								</li>
+								{% endfor %}
+							
+							</div>
+						
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+		</div>			
+	</div>		
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+    <script>
+    $(function(){
+    	 function _mevShowViewCards(type,id,name){
+  	    	$("#"+type+"-title").text(name+" views");
+  	    	$(".mev-"+type+"-card").hide();
+  	    	$(".mev-"+type+"-card-"+id).show()
+  	    }
+	    $(".mev-view-card").click(function(e){
+	    	let info=  $(this).attr("id").split("-");
+	    	let url = "/projects/"+info[0]+"/"+info[1];
+	    	window.open(url);
+	    	
+	    });
+	    
+	    $(".mev-share").click(function(e){
+	    	let id=  $(this).attr("id").split("-")[1];
+	    	new ShareObjectDialog(id,$(this).parent().find("h5").text());
+	    	e.preventDefault();
+	    	return false;
+	    	
+	    });
+	    $(".mev-public").click(function(e){
+	    	let id=  $(this).attr("id").split("-")[1];
+	    	makeObjectPublic(id,$(this).parent().find("h5").text());
+	    	e.preventDefault();
+	    	return false;
+	    	
+	    });
+	    
+	    $(".mev-experiment-card").click(function(e){
+	    	let name = $(this).find(".card-header h5").text();
+	    	
+	    	let id =$(this).attr("id").split("-")[1];
+	    	_mevShowViewCards("data_view",id,name);
+	    });
+	    $(".mev-group-card").click(function(e){
+	    	let name = $(this).find(".card-header h5").text();
+	    	let id =$(this).attr("id").split("-")[1];
+	    	_mevShowViewCards("group_view",id,name);
+	    })
+	    $("#create-data-set").click(function(e){
+	    	let url = "/projects/experiment/home";
+	    	window.open(url);
+	    });
+	    
+	    $("#create-data-view").click(function(e){
+	    	let url = "/projects/data_view/home";
+	    	window.open(url);
+	    });
+	    $("#create-group-view").click(function(e){
+	    	let url = "/projects/group_view/home";
+	    	window.open(url);
+	    });
+	  
+	    _mevShowViewCards("data_view",{{experiment[0]['id']}},"{{experiment[0]['name']}}");
+        _mevShowViewCards("group_view",{{experiment_group[0]['id']}},"{{experiment_group[0]['name']}}");
+	    
+    });
+    
+    </script>
+ 
+    	
+{% endblock %}

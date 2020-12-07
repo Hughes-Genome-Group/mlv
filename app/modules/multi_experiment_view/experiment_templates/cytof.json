@@ -1,0 +1,40 @@
+{
+   "groups":[
+        {
+            "name":"Clusters",
+            "rule":"starts_with",
+            "datatype":"text",
+            "values":["cluster","som","meta"]
+        
+        },
+        {
+            "name":"Sample Info",
+            "rule":"exact_match",
+            "values":["sample_id","condition","patient_id"],
+            "datatype":"text"
+         
+        },
+        {
+            "name":"Dimension Reduction",
+            "rule":"starts_with",
+            "values":["TSNE","UMAP"],
+            "datatype":"double"
+         
+        },
+        {
+        	"name":"Antibody",
+            "rule":"exact_match",
+            "values":["CD45","CD4","CD57","CD19","CD11c","CD11b","CD45RA","GranzymeB","CD20","IgG_Vd2","CD33","IgA","CD66",
+                      "CD62L","CD103","IgD_TCRgd","Va7.2","CD31","CD123","CD161","CD27","FOXP3","CD14","Tbet","Siglec_8","CD21","Ki67",
+                      "CD45RO","CD56","CCR7","CD127","CD38","CD3","CD25","CD71","CD141","HLADR","CD99","CD24","CD8a","CD16","BCL_2","CD28",
+                      "CD39","CD69","CD8","CLA","CTLA4","CX3CR1","GZB","Ir193Di","HLA_DR","IgG","IgM","Ir191Di","Ki_67","PD1","Va7_2","Vd2","KLGR1"],
+            "datatype":"double"
+        
+        }
+   ]
+
+
+
+
+
+}

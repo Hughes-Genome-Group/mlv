@@ -36,11 +36,19 @@ class ProjectChooserDialog{
             buttons:buttons,
             title:title,
             width:600,
-            height:400
+            height:400,
+            close:function(e){
+            	self.table.data_view.removeCustomFilter("id_filter");
+            },
+        	open:function(e){
+        		self.table.data_view.filterData();
+        		self.table.resize();
+        	}
         }).dialogFix();
      
         this._addTable();
         this.has_data=false;
+        
       
     }
 
@@ -66,24 +74,49 @@ class ProjectChooserDialog{
         			sortable:true
         		})
         	}
+        	if (this.options.no_genome_column){
+        		let new_cols=[];
+        		for (let c of columns){
+        			if (c.name==="Genome"){
+        				continue;
+        			}
+        			if (c.name=="Description"){
+        				c.width=300;
+        			}
+        			new_cols.push(c);
+        			
+        		}
+        		columns=new_cols;
+        	}
             this.table = new MLVTable("pc-table-"+this.count,columns);
         });
     }
     
 
 
-    show(callback){
+    show(callback,exclude_ids){
         this.callback=callback;
         if (this.has_data){
+        	if (exclude_ids){
+        		this._filterIds(exclude_ids);
+        	}
             this.div.dialog("open");
         }
         else{
-            this._loadData(true);
+            this._loadData(true,exclude_ids);
             
         }     
     }
+    
+    _filterIds(exclude_ids){
+    	this.table.data_view.addCustomFilter("id_filter",function(d){
+    		return !(exclude_ids[d.id])
+    	});
+    	this.table.data_view.filterData();
+    	
+    }
 
-    _loadData(auto_open){
+    _loadData(auto_open,exclude_ids){
         this.has_data=true;
         let url="/meths/get_project_information";
         let to_send={
@@ -107,6 +140,9 @@ class ProjectChooserDialog{
             this.table.data_view.setItems(data.projects);
             if (auto_open){
             	this.div.dialog("open");
+            }
+            if (exclude_ids){
+            	this._filterIds(exclude_ids)
             }
             this.table.resize();
         });

@@ -2,7 +2,7 @@ from app import databases,app
 from app.databases.main_database import get_where_clause
 from pathlib import Path
 from time import sleep
-import json,os,csv,gzip,ujson,shutil,sys,subprocess,math
+import json,os,csv,gzip,ujson,shutil,sys,subprocess,math,string,random
 from _csv import reader
 from app.ngs.gene import get_genes_in_view_set,GeneSet
 from app.zegami.zegamiupload import get_tags,update_collection,create_new_set,delete_collection
@@ -88,7 +88,7 @@ class ViewSet(object):
             print (str(offset))
             offset+=chunk_size
             
-        
+        return list(info.values())
     
        
     
@@ -261,8 +261,8 @@ class ViewSet(object):
         self.update()
         
     def add_ts_starts(self,geneset_id=None,overlap_column=False,go_levels=0):
-        if self.data["field_information"].get("TSS"):
-            self.remove_columns(self.data["field_information"]["TSS"].values())
+        #if self.data["field_information"].get("TSS"):
+        #    self.remove_columns(self.data["field_information"]["TSS"].values())
         bed=os.path.join(self.get_folder(),"loc.bed.gz")
         if not os.path.exists(bed):
             self.create_bed_file()
@@ -333,7 +333,22 @@ class ViewSet(object):
                     
             update_list.append(rec)
         databases[self.db].update_table_with_dicts(update_list,self.table_name)
-        return {"columns":name_to_field,"data":update_list}
+        graphs = [{
+            "type":"bar_chart",
+            "param":name_to_field["TSS Distance"],
+            "title":"Distance From TSS",
+            "bin_number":50,
+            "location":{
+                "x":0,
+                "y":0,
+                "height":4,
+                "width":5
+            },
+            "id":"tss_chart"+random_string(5)
+            
+            
+        }]
+        return {"fields":list(name_to_field.values()),"data":update_list,"graphs":graphs}
     
     def get_tss_data(self):
         columns=[]
@@ -369,7 +384,66 @@ class ViewSet(object):
             "data":data,
             "graphs":graphs
         }
+    
+    
+    def get_columns_and_data(self,fields):
+        columns=[]
+        field_names=[]
+       
+        for field in fields:
+            col =self.fields[field]
+            col["filterable"]=True
+            col["sortable"]=True
+            col["name"]=col["label"]
+            col["field"]=field
+            col["id"]=field
+            columns.append(col)
+            field_names.append(col["field"])
+            
+        sql = "SELECT id,{} from {}".format(",".join(field_names),self.table_name) 
+        data = databases[self.db].execute_query(sql)
+        return {"columns":columns,"data":data}
         
+       
+    def get_wig_stats_data(self,wig_names):
+        columns=[]
+        field_names=[]
+        for name in wig_names:
+            feilds= self.data["field_information"][name+ " Stats"]
+            for field in feilds.values():
+                col =self.fields[field]
+                col["filterable"]=True
+                col["sortable"]=True
+                col["name"]=col["label"]
+                col["field"]=field
+                col["id"]=field
+                columns.append(col)
+                field_names.append(field)
+        sql = "SELECT id,{} from {}".format(",".join(field_names),self.table_name) 
+        data = databases[self.db].execute_query(sql)
+        return {"columns":columns,"data":data}
+        
+        
+    def get_cluster_data(self,name,methods):
+        info = self.data["field_information"].get("cluster_by_fields")
+        columns=[]
+        field_names=[]
+        for method in methods:
+            fields = info[method+" "+name]
+            for field in fields:
+                col =self.fields[field]
+                col["filterable"]=True
+                col["sortable"]=True
+                col["name"]=col["label"]
+                col["field"]=field
+                col["id"]=field
+                columns.append(col)
+                field_names.append(field)
+                
+        sql = "SELECT id,{} from {}".format(",".join(field_names),self.table_name) 
+        data = databases[self.db].execute_query(sql)
+        return {"columns":columns,"data":data}
+    
     
     def get_annotation_data(self,ids):
         from app.ngs.project import get_project
@@ -489,11 +563,40 @@ class ViewSet(object):
             update_list.append(update_dict)
         
         databases[self.db].update_table_with_dicts(update_list,self.table_name)
+        tracks=[]
+        tracks.append({
+                "url":"/tracks/projects/{}/anno_{}.bed.gz".format(id,id),
+                "short_label":p.name,
+                "featureHeight":12,
+                "height":15,
+                "color":"#5F9EA0",
+                "track_id":"annotation_{}".format(random_string(5)),
+                "allow_user_remove":True,
+                "displayMode":"SQUISHED",
+                "decode_function":"generic"
+                
+            })
+        wig = p.get_main_wig_track()
+            
+        if wig:
+            wig["allow_user_remove"]=True
+            tracks.append(wig)
+            
+        return{
+            "tracks":tracks,
+            "fields":list(name_to_field.values()),
+            "graphs":[]
+            
+        }
                 
                     
-                
+    def remove_items(self,ids):
+        databases[self.db].delete_by_id(self.table_name,ids)
+        
+                  
   
     def add_annotations_intersect(self,ids):
+        from app.ngs.project import get_project
         sql= "SELECT id,type,name,data->>'bed_file' AS bed FROM projects WHERE id = ANY(%s)"
         results =databases['system'].execute_query(sql,(ids,))
         files=[]
@@ -512,6 +615,8 @@ class ViewSet(object):
         if not annotation_information:
             annotation_information={}
             self.data["annotation_information"]=annotation_information
+        
+     
         for index,row in enumerate(results,start=1):
             #delete prevoius column
             field = annotation_information.get(str(row['id']))
@@ -524,6 +629,7 @@ class ViewSet(object):
                 "type":row["type"]
                 
             }
+           
         self.update()
         bed=self.get_bed_file()
         command = "bedtools intersect -wa -wb -a {} -b {}".format(bed," ".join(files))
@@ -554,9 +660,53 @@ class ViewSet(object):
             field=name_to_field[name]
             sql = "UPDATE {} SET {}='FALSE' WHERE {} IS NULL".format(self.table_name,field,field)
             databases[self.db].execute_update(sql)
+        tracks=[]
+        graphs=[]
+        for aid in ids:
+            p=get_project(aid)
+              
+            tracks.append({
+                "url":"/tracks/projects/{}/anno_{}.bed.gz".format(aid,aid),
+                "short_label":p.name,
+                "featureHeight":12,
+                "height":15,
+                "color":"#5F9EA0",
+                "track_id":"annotation_{}".format(random_string(5)),
+                "allow_user_remove":True,
+                "displayMode":"SQUISHED",
+                "decode_function":"generic"
+                
+            })
+            wig = p.get_main_wig_track()
+            
+            if wig:
+                wig["allow_user_remove"]=True
+                tracks.append(wig)
+            
+            graphs.append({
+                "type":"ring_chart",
+                "param":name_to_field[p.name],
+                "title":p.name +"Intersections",
+                "id":"anno_pie_"+random_string(5),
+                "location":{"x":0,"y":0,"height":3,"width":3}
+            })
+            
+            
+        return {
+            "fields":list(name_to_field.values()),
+            "tracks":tracks,
+            "graphs":graphs
+               
+            
+        }
        
             
     def clone(self,ids,name="",description=""):
+        if len(ids)==0:
+            sql= "SELECT id FROM {}".format(self.table_name)
+            res= databases[self.db].execute_query(sql)
+            for r in res:
+                ids.append(r["id"])   
         if not description:
             description = "Created from view set {}".format(self.id)
         table_name = create_table(name,[],self.db,owner=self.owner,description=description)
@@ -590,10 +740,15 @@ class ViewSet(object):
         return vs
         
             
-    def create_compound_column(self,columns,operator,name):
-        for col in columns:
-            if not self.fields.get(col):
-                raise Exception("{} column not recognised".format(col))
+    def create_compound_column(self,name,stages,final_trans):
+        columns= set()
+        #make sure columns exist and de-replicate
+        for stage in stages:
+            for col in stage["columns"]:
+                if not self.fields.get(col):
+                    raise Exception("{} column not recognised".format(col))
+                columns.add(col)
+              
         cols = ",".join(columns)
         sql = "SELECT id,{} from {}".format(cols,self.table_name)
         res =databases[self.db].execute_query(sql)
@@ -602,37 +757,41 @@ class ViewSet(object):
         field = l_to_f[name]
         update_list=[]
         update_list2=[]
+        operand = None
         for r in res:
-            v1= r[columns[0]]
-            v2= r[columns[1]]
-            if operator =="/":
-                if v2 ==0:
-                    v2=0.01
-                res= v1/v2
-            elif operator=="*":
-                res=v1*v2
-            elif operator=="-":
-                res=v1-v2
-            elif operator =="rel":
-                res= (v1-v2)
-                if v1==0:
-                    res=res/0.01
+            tot=0
+            for stage in stages:
+                if stage["count"]==1:
+                    val = r[stage["columns"][0]]
                 else:
-                    res=res/v1
-            elif operator=="log_change":
-                if v2 ==0:
-                    v2=0.01
-                res = v1/v2
-                if res>0:
-                    res= math.log2(res)
-                    
-                
-                
-            else:
-                res=v1+v2
-            
-            update_list.append({"id":r["id"],field:res})
-            update_list2.append({"id":r["id"],field:res})
+                    arr=[]
+                    for col in stage["columns"]:
+                        arr.append(r[col])
+                    val = sum(arr)
+                    if stage["aggregate"]=="AVERAGE":
+                        val=val/stage["count"]
+                if not operand:
+                    tot=val                      
+                elif operand =="/":
+                    if val ==0:
+                        val=0.01
+                    tot= tot / val
+                elif operand=="*":
+                    tot=tot*val
+                elif operand=="-":
+                    tot=tot-val
+               
+                else:
+                    tot=tot+val
+                operand= stage.get("operand")
+            if final_trans!="none":
+                if tot >0:
+                    if final_trans=="log2":
+                        tot=math.log2(tot)
+                    else:
+                        tot=math.log10(tot)
+            update_list.append({"id":r["id"],field:tot})
+            update_list2.append({"id":r["id"],field:tot})
                 
         databases[self.db].update_table_with_dicts(update_list,self.table_name)
         
@@ -651,7 +810,8 @@ class ViewSet(object):
             "graphs":[{
                 "type":"bar_chart",
                 "param":field,
-                "title":name
+                "title":name,
+                "id":random_string(5)
                 
             }]
         }
@@ -662,6 +822,7 @@ class ViewSet(object):
          
     def add_annotations(self,ids):
         from app.ngs.annotation import get_annotations_in_view_set
+       
         '''Updates the view set with extra columns for each annotation
         Each column will contain True or False depending on whether 
         the view region contains the annotation
@@ -1081,7 +1242,10 @@ class ViewSet(object):
         #whats the largest column number
         max=0
         for name in self.fields:
-            num = int(name[5:])
+            try:
+                num = int(name[1:])
+            except:
+                num = int(name[5:])
             if num>max:
                 max=num
         max+=1
@@ -1091,7 +1255,7 @@ class ViewSet(object):
         for col in columns:
             if not col.get("label") or not col.get("datatype"):
                 raise ValueError("column does not contain label or datatype")
-            name = "field"+str(max)
+            name = "f"+str(max)
             max+=1
             self.fields[name]=col
             update_cols[name]=col
@@ -1129,21 +1293,36 @@ class ViewSet(object):
             for name in self.fields:
                 if self.fields[name] in column_names:
                     fields_to_delete.append(name)
-                    del self.fields[name]
+                    #del self.fields[name]
         else:
             for name in column_names:
                 if self.fields.get(name):
                     fields_to_delete.append(name)
-                    del self.fields[name]
-        sql = "UPDATE view_sets SET fields = fields::jsonb {} WHERE id = {}"
+                    #del self.fields[name]
+        if len(fields_to_delete)==0:
+            return
+        for n in fields_to_delete:
+            f= self.fields.get(n)
+            if f.get("master_group_column"):
+                for name in self.fields:
+                    fl = self.fields[name]
+                    if fl.get("columnGroup")== f["columnGroup"]:
+                        if name not in fields_to_delete :
+                            fl["master_group_column"]=True
+                            break
+            del self.fields[n]          
+           
+        '''sql = "UPDATE view_sets SET fields = fields::jsonb {} WHERE id = {}"
         vars= ()
         tf=""         
         for field in fields_to_delete:
             tf+=" -%s"
             vars = vars + (field,)
-        sql = sql.format(tf,self.id)  
+        sql = sql.format(tf,self.id)'''
+            
+        sql = "UPDATE view_sets SET fields = %s WHERE id = %s"
        
-        databases[self.db].execute_update(sql,vars)
+        databases[self.db].execute_update(sql,(ujson.dumps(self.fields),self.id))
         databases[self.db].remove_columns(self.table_name,fields_to_delete)
                
     def get_label_to_field(self):
@@ -1155,8 +1334,10 @@ class ViewSet(object):
         for field in self.fields:
             lab_to_field[self.fields[field]["label"]]=field
         return lab_to_field
-        
-    def get_all_views(self,location_only=False,specific_views=None,filters= None):
+     
+    
+           
+    def get_all_views(self,location_only=False,specific_views=None,filters= None,offset=None):
         '''Get all the views as a list of dictionaries orderd
         by id (ascending)
         Args:
@@ -1190,6 +1371,8 @@ class ViewSet(object):
                          
             
         sql+=" ORDER BY id"
+        if offset:
+            sql+=" OFFSET {} LIMIT {}".format(offset[0],offset[1])
         return databases[self.db].execute_query(sql,vars)
     
     def get_views(self,chromosome,start,finish):
@@ -1349,9 +1532,11 @@ class ViewSet(object):
         self.data=data
         
      
-    def get_bed_file(self):
+    def get_bed_file(self,force=False):
         bed_file=os.path.join(self.get_folder(),"loc.bed.gz")
-        if not os.path.exists(bed_file):
+        if not os.path.exists(bed_file) or force:
+            if os.path.exists(bed_file):
+                os.remove(bed_file)
             self.create_bed_file()
         return bed_file
     
@@ -1361,7 +1546,7 @@ class ViewSet(object):
         default viewset folder.Also creates a tabix index in the same
         folder   
         '''
-        
+        lookup = app.config["GENOME_DATABASES"][self.db].get("ens_to_ucsc")
         folder =self.get_folder()
         file_loc=os.path.join(folder,"loc.bed")
         out_file=open(file_loc,"w")
@@ -1371,6 +1556,8 @@ class ViewSet(object):
             sql = "SELECT id,chromosome AS c,start AS s,finish AS f FROM {} ORDER BY chromosome,start,finish OFFSET {} LIMIT {}".format(self.table_name,offset,chunksize)
             rows = databases[self.db].execute_query(sql)
             for row in rows:
+                if lookup:
+                    row["c"]=lookup.get(row["c"],row["c"])
                 out_file.write("{}\t{}\t{}\t{}\n".format(row["c"],row['s'],row['f'],row['id']))
             offset+=chunksize
         out_file.close()
@@ -1474,7 +1661,7 @@ def _determine_fields(file_name):
                     if header=="track_id":
                         track_id_position=n
                         continue
-                    extra_fields[n]={"name":"field"+str(n),"label":header,"datatype":"integer","order":n,"parser":int}
+                    extra_fields[n]={"name":"f"+str(n),"label":header,"datatype":"integer","order":n,"parser":int}
                 continue
             for n,value in enumerate(row[offset:],start=1):
                 if n==track_id_position:
@@ -1546,7 +1733,7 @@ def parse_extra_fields(fields):
             field['parser']=int
         field['order']=pos
         field['label']=field['name']
-        field['name']="field"+str(pos)
+        field['name']="f"+str(pos)
     return extra_fields
     
 
@@ -1712,7 +1899,8 @@ def create_table(name,fields,db,owner=0,data=None,description=""):
     databases[db].run_script(script)
     return table_name      
                         
-            
+def random_string(size=25,chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))  
 
                 
        

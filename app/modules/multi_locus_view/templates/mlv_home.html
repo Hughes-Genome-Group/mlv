@@ -4,7 +4,7 @@
 	<link href="/multi_locus_view/static/custom_home/pe-icons.css" rel="stylesheet">
     <link href="/multi_locus_view/static/custom_home/prettyPhoto.css" rel="stylesheet">
     <link href="/multi_locus_view/static/custom_home/animate.css" rel="stylesheet">
-    <link href="/multi_locus_view/static/custom_home/style.css" rel="stylesheet">
+    <link href="/multi_locus_view/static/custom_home/style.css?version={{config['JS_VERSION']}}" rel="stylesheet">
 	
 {% endblock %}
 
@@ -54,12 +54,139 @@
 	                <div class="gap"></div>
 	      		</div>
   		</section>
+  		
+  	
+
+        <section id="about-us" class="white">
+        	<div class="container">
+        		            <div class="center gap fade-down section-heading">
+	                <h2 class="main-title">VIDEOS</h2>
+	                <hr>
+	                <p>Watch a video demonstrating the basic functionality of MLV</p>
+	            </div>
+        	
+	      
+	            <div id="meet-the-team" class="row">
+	                <div class="col-md-4 col-xs-6">
+	                    <div class="center team-member">
+                            <div class="team-image">
+                                <img class="img-responsive img-thumbnail fade-down" src="/multi_locus_view/static/custom_home/video1.png" alt="">
+                                <div class="overlay">
+                                    <a class="preview  btn no-dis btn-outlined btn-primary" href="https://youtu.be/rfa2os4237Q" target="_blank"><i class="fa fa-eye" style="font-size:16px"></i></a>
+                                </div>
+                            </div>
+	                        <div class="team-content fade-up">
+	                            <h5>Uploading Data and Basic Analysis</h5>
+	                           
+	                        </div>
+	                    </div>
+	                </div>
+	                 <div class="col-md-4 col-xs-6">
+	                    <div class="center team-member">
+                            <div class="team-image">
+                                <img class="img-responsive img-thumbnail fade-down" src="/multi_locus_view/static/custom_home/video2.png" target="_blank" alt="">
+                                <div class="overlay">
+                                    <a class=" preview btn no-dis btn-outlined btn-primary" href="https://youtu.be/7jNnIPHr6pE" ><i class="fa fa-eye" style="font-size:16px"></i></a>
+                                </div>
+                            </div>
+	                        <div class="team-content fade-up">
+	                            <h5>Creating Images and Tagging Data</h5>
+	                           
+	                        </div>
+	                    </div>
+	                </div>
+	                 <div class="col-md-4 col-xs-6">
+	                    <div class="center team-member">
+                            <div class="team-image">
+                                <img class="img-responsive img-thumbnail fade-down" src="/multi_locus_view/static/custom_home/video3.png">
+                                <div class="overlay">
+                                    <a class="preview btn no-dis btn-outlined btn-primary" href="https://youtu.be/55Vx-JDPchw" target="_blank"><i class="fa fa-eye" style="font-size:16px"></i></a>
+                                </div>
+                            </div>
+	                        <div class="team-content fade-up">
+	                            <h5>Clustering Data and Further Analysis</h5>
+	                           
+	                        </div>
+	                    </div>
+	                </div>
+
+	              
+	            </div><!--/#meet-the-team-->
+	            
+            </div>
+            <div class="gap"></div>
+            
+            <div class="center gap fade-down section-heading">
+	                <h2 class="main-title">Featured Projects</h2>
+	                
+	            </div>
+	                <div class="row">
+	                    <div class="col-md-2"></div>
+	                    <div class="col-md-4">
+	                        <div class="post fade-up">
+	                          
+	                            <div class="content">
+	                                <h5> The structural basis for cohesin-CTF-anchored loops</h5>
+	                              	 <div class="post-img-content ">
+	                                <img style ="margin-left:auto;margin-right:auto;display:block" src="/multi_locus_view/static/custom_home/fp1.png" />
+	                                
+	                            </div>
+	                                <div>
+	                                   This project takes data from <a href="https://www.nature.com/articles/s41586-019-1910-z"> <i>Li et al</i></a> 
+	                                   and looks at CTCF and cohesin ChIP-seq experiments. As well as confirming the findings of the paper, it also offers new insights
+	                                   into the data. There are two tutorial videos showing how the project was created,
+	                                   <a href=" https://www.youtube.com/watch?v=rfa2os4237Q">Uploading Data and Basic Analysis</a> and 
+	                                   <a href=" https://www.youtube.com/watch?v=7jNnIPHr6pE"> Creating Images and Tagging Data</a> 
+	                                </div>
+	                                <div class="read-more-wrapper">
+	                                    <a href="/projects/multi_locus_view/2057" class="btn btn-outlined btn-primary">View</a>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="col-md-4">
+	                        <div class="post fade-up">
+	                            
+	                            <div class="content">
+	                                <h5>Looking at ChIP-seq signals in enhancers and prometers</h5>
+	                                <div class="post-img-content">
+	                                	<img style ="margin-left:auto;margin-right:auto;display:block" src="/multi_locus_view/static/custom_home/fp2.png" />
+	                               </div>
+	                                <div>
+	                                  This project takes ChIP-seq data from <a href = "https://www.sciencedirect.com/science/article/pii/S109727651100997X"> <i>Kowalczyk et al</i></a> 
+	                                  and clusters the data based on various CHiP-seq signals using the dimension reduction algorithms tSNE and UMAP. Along with distance from TSSs, this allows the exploration of promoters and enhancers. It forms the basis of the third tutorial  <a  href="https://youtu.be/55Vx-JDPchw" target="_blank">
+	                                  Clustering Data and Further Analysis
+	                                  </a>
+	                                </div>
+	                                <div class="read-more-wrapper">
+	                                    <a href="/projects/multi_locus_view/1590" class="btn btn-outlined btn-primary">View</a>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="col-md-2"></div>
+	                    
+                    </div>
+	           
+	            
+	           
+
+	          
+        </section>
+        
+           
+
+  
+  		
+  		
+  		
+  		
         <section id="services" class="white">
             <div class="container">
-            <div class="gap"></div>
+            
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="center gap fade-down section-heading">
+                        <div class="center fade-down section-heading">
                             <h2 class="main-title">Publications</h2>
                         </div>
                     </div>
@@ -111,6 +238,9 @@
                                    <a href="https://lanceotron.readthedocs.io/en/latest/mlv_developer/developer.html" class="list-group-item list-group-item-action">
                                   		Developer Documentation
                                   </a>
+                                  <a href="https://github.com/Hughes-Genome-Group/mlv/issues"" class="list-group-item list-group-item-action">
+                                  		Submit an Issue
+                                  </a>
                                </div>
                                 
                             </div>
@@ -157,7 +287,7 @@
                    		<div class="gap"></div>
                         <h2 class="main-title">Applications that use MLV</h2>
                         <hr>
-                        <p>MLV is designed to be modular and allows development of other NGS visualisation solution </p>
+                        <p>MLV is designed to be modular and allows development of other NGS visualisation solutions </p>
                     </div>
                     <div class="gap"></div>
                     <div class="row">
@@ -172,9 +302,9 @@
 	                                
 	                            </div>
 	                                <div>
-	                                   CaptureSee facilitates the easy interaction with higly multiplexec3C data.
+	                                   CaptureSee facilitates the easy interaction with highly multiplexed 3C data.
 										It enables users to quickly jump between capture viewpoints in the genome, 
-										to see reporter counts for each viewpoint on a per sample basis, 
+										to see reporter counts for each viewpoint on a per sample basis  
 										and filter DESeq2 results to find significantly interacting RE fragments.  
 	                                </div>
 	                                <div class="read-more-wrapper">
@@ -217,18 +347,7 @@
 
                
                 
-                	            <div class="center gap fade-down section-heading">
-	                <h2 class="main-title">Latest Projects</h2>
-	                
-	            </div>
-	            <div class="gap"></div>
-	            
-	           
-
-	            <div class="row">
-	                <div id="latest-projects" class="center"></div> 
-	               
-                </div>
+                	         
                 
                 
                 
@@ -304,7 +423,7 @@
 	        "/multi_locus_view/static/custom_home/slider_3.png"
 	    	], {duration: 2000, fade: 500, centeredY: true });
     	});
-    	new ProjectCardDeck("latest-projects",{type:["multi_locus_view"]},
+    	/*new ProjectCardDeck("latest-projects",{type:["multi_locus_view"],project_ids:[1590,2057]},
     			{	limit:4,hide_navbar:true,
     				hide_more_button:true,card_classes:"no-display",
     				data_loaded:function(){
@@ -313,7 +432,7 @@
     				})
     				}
     			});
-    
+      */
     	
     
    

@@ -91,9 +91,7 @@
 
                 <!-- END LOGO SECTION -->
                 <ul class="nav navbar-nav ml-auto">
-              
-                {% if current_user.is_authenticated %}
-                 <li class="nav-link dropdown">
+                    <li class="nav-link dropdown">
                         <a class="dropdown" data-toggle="dropdown" href="#">
                    
                             <i class="fas fa-question "></i>&nbsp; <i class="caret"></i>
@@ -101,14 +99,19 @@
                         </a>
 
                         <ul class="dropdown-menu dropdown-user">
-                         
-                            <li><a href="javascript:new SendHelpMessageDialog()"><i class="fas fa-envelope"></i> Send Question</a>
+                         </li>
+                           <li><a target="_blank" href="{{config['MAIN_HELP_PAGE']}}"><i class="fas fa-book-open"></i> Documentation </a>
                             </li>
-                            <!--<li><a href="{{help_page}}"><i class="fab fa-internet-explorer"></i> Help Page </a>
-                            </li>-->
+                         	 {% if current_user.is_authenticated %}
+                            <li><a href="javascript:new SendHelpMessageDialog()"><i class="fas fa-envelope"></i> Send Question</a>
+                            {% endif %}"
+                           
                         </ul>
 
                     </li>
+              
+                {% if current_user.is_authenticated %}
+             
                 	
                     <li class=" nav-link dropdown">
                         <a class="dropdown" data-toggle="dropdown" href="#">

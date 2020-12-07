@@ -55,7 +55,7 @@ DATA_FOLDER="/data/mlv/"
 TEMP_FOLDER="/data/mlv/temp"
 TRACKS_FOLDER="/data/tracks"
 
-JS_VERSION="5.075"
+JS_VERSION="5.165"
 
 
 #email settings
@@ -66,8 +66,6 @@ MAIL_USE_TLS = True
 MAIL_USERNAME = 'mlv@gmail.com'
 MAIL_PASSWORD = 'password'
 MAIL_DEFAULT_SENDER = 'The MLV Team'
-HELP_EMAIL_RECIPIENTS=[]
-
 
 HELP_EMAIL_RECIPIENTS=["mlv@gmail.com"]
 
@@ -75,9 +73,7 @@ HOME_PAGE = "mlv_home.html"
 APPLICATION_NAME="MultiLocusView"
 APPLICATION_LOGO='/static/img/logo.png'
 
-
 USER_PERMISSIONS={}
-
 
 MLV_PROJECTS={ 
     "annotation_set":{
@@ -92,15 +88,19 @@ MLV_PROJECTS={
      }  
 }
 
-
 MODULES=["multi_locus_view"]
-
-
+MODULE_INFO={}
 
 #celery settings
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'amqp'
 USE_CELERY=True
+
+ZEGAMI_SETTINGS={
+    "API_URL":"https://zegami.com/api/",
+    "OAUTH_URL":"https://zegami.com/oauth/token/"
+    
+}
 
 
 

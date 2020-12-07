@@ -1,0 +1,79 @@
+.dv-hover:hover{
+	background-color:lightgrey;
+	cursor:pointer;
+}
+.dv-large-radio{
+	height:15px;
+	width:15px;
+	margin:3px;
+}
+
+.dv-dialog label{
+	display:block;
+}
+
+.mev-group-span{
+	margin:3px;
+}
+
+.mev-cluster-span{
+	margin:2px;
+	padding:0px 3px;
+	border-radius:5px;
+	border:1px solid black;
+	display:inline-block;
+}
+
+.mev-icon{
+	cursor:pointer;
+	font-size:16px;
+	margin:3px;
+}
+
+.mev-btn-sm{
+	padding: 1px 2px;
+	margin:2px;
+}
+
+.mev-card{
+	max-width:300px;
+	min-width:300px;
+	margin-bottom:15px !important;
+}
+.mev-card .list-group-item{
+	padding:2px;
+	font-size:14px;
+}
+.mev-card .col-lg-6{
+	padding:3px;
+}
+
+.mev-card-description{
+	font-size:13px;
+}
+
+.mev-view-button{
+	margin-left:4px;
+}
+.mev-view-card,.mev-experiment-card,.mev-group-card{
+	cursor:pointer;
+	box-sizing:border-box !important;
+	-moz-box-sizing: border-box !important;
+    -webkit-box-sizing: border-box !important;
+    display:none;
+	
+}
+
+.mev-view-card:hover{
+	border: 1px solid black;
+
+	
+}
+.mev-group-card:hover{
+	border: 1px solid black;
+	
+}
+.mev-experiment-card:hover{
+	border: 1px solid black;
+	
+}

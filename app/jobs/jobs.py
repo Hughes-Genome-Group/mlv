@@ -5,7 +5,7 @@ from app.ngs.utils import get_temporary_folder
 from app.zegami.zegamiupload import update_collection,delete_collection
 from app.jobs.celery_tasks import process_job
 from sqlalchemy import text
-from app.ngs.project import get_project
+from app.ngs.project import get_project,random_string
 from app.ngs.view import ViewSet
 import traceback,requests,os,shutil
 from app.ngs.thumbnail import create_thumbnails_from_ucsc,create_thumbnails_from_mlv
@@ -140,6 +140,20 @@ class AnnotationIntersectionJob(LocalJob):
             super().__init__(job=job)
         else:   
             super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="annotation_intersection_job")
+            
+    def label_history(self,history):
+        self.set_input_parameter("history_id",history["id"])
+        history["label"] = "Calculate Intersections"
+        history["job_id"]=self.job.id
+        info=[]
+        ids = self.job.inputs["ids"]
+        sql = "SELECT name FROM projects WHERE id = ANY(%s)"
+        res= databases["system"].execute_query(sql,(ids,))
+        names=[]
+        for r in res:
+            names.append(r["name"])
+        history["info"]="Calculated intsersections with:\n"+", ".join(names)
+        
     def process(self):
         try:
             #do they contain tabix index bed files
@@ -148,16 +162,24 @@ class AnnotationIntersectionJob(LocalJob):
                 if not p.data.get("bed_file"):
                     p.create_anno_bed_file()
             p= get_project(self.job.inputs["project_id"])
-            vs = ViewSet(self.job.genome,p.get_viewset_id())
-            ec = self.job.inputs.get("extra_columns")
-            ids= self.job.inputs["ids"]
-            if ec:
-                vs.add_annotation_fields(ids[0],ec)
-            else:
-                vs.add_annotations_intersect(ids)
+            data = p.add_intersections(self.job.inputs["ids"],self.job.inputs.get("extra_columns"))
+            hid= self.get_input_parameter("history_id")
+            p.refresh_data()
+            history=p.get_history(hid)
+            if history:
+                history["tracks"]=data["tracks"]
+                history["fields"]=data["fields"]
+                history["graphs"]=data["graphs"]
+                history["status"]="complete"        
+            p.update()      
             self.complete()
         except Exception as e:
-            app.logger.exception("Cannot process AnnotationIntersectionJob # {}".format(self.job.id))
+            app.logger.exception("Cannot process Annotation IntersectionJob # {}".format(self.job.id))
+            p.refresh_data()
+            hid= self.get_input_parameter("history_id")
+            history=p.get_history(hid)             
+            history["status"]="failed"
+            p.update();
             self.failed(traceback.format_exc())
 
 
@@ -165,80 +187,104 @@ class PeakStatsJob(LocalJob):
         def __init__(self,job=None,inputs=None,user_id=0,genome="other"):
             if (job):
                 super().__init__(job=job)
-            else:   
+            else:
+                inputs["slow_queue"]=True   
                 super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="peak_stats_job")
                 
+        def label_history(self,history):
+            self.set_input_parameter("history_id",history["id"])
+            history["label"] = "Add Peak Stats"
+            history["job_id"]=self.job.id
+            info=[]
+            for n,wl in enumerate(self.job.inputs["wig_locations"]):
+                name = self.job.inputs["wig_names"][n]
+                info.append("{}: {}".format(name,wl))
+            history["info"]="Area and max height of the signal for each BigWig file calculated at each location\n"
+            history["info"]+="BigWig Files processed:\n"+"\n".join(info)
+                  
         def process(self):
             p=get_project(self.job.inputs["project_id"])
             try:
-                
+                tracks=[]
+                fields=[]
                 for n,wl in enumerate(self.job.inputs["wig_locations"]):
                     name = self.job.inputs["wig_names"][n]
                     self.set_status("Processing "+name)
-                    p.add_bw_stats(wl,name)
-                p.set_data("peak_stats_job_status","complete")
+                    info = p.add_bw_stats(wl,name)
+                    tracks.append(info["track"])
+                    fields=fields+info["fields"]
+                    
+               
+                hid= self.get_input_parameter("history_id")
+                p.refresh_data()
+                history=p.get_history(hid) 
+                history["tracks"]=tracks
+                history["fields"]=fields
+                history["graphs"]=[]
+                history["status"]="complete"        
+                p.update()      
                 self.complete()
+                
             except Exception as e:
                 app.logger.exception("Cannot process PeakStatsJob # {}".format(self.job.id))
-                p.set_data("peak_stats_job_status","failed")
+                p.refresh_data()
+                hid= self.get_input_parameter("history_id")
+                history=p.get_history(hid)
+               
+                history["status"]="failed"
+                p.update();
                 self.failed(traceback.format_exc())
             
 class ClusterByFieldsJob(LocalJob):
         def __init__(self,job=None,inputs=None,user_id=0,genome="other"):
             if (job):
                 super().__init__(job=job)
-            else:   
+            else:
+                inputs["slow_queue"]=True
                 super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="cluster_by_fields_job")
                 
+        def label_history(self,history):
+            self.set_input_parameter("history_id",history["id"])
+            history["label"] = "Dimension Reduction "+self.job.inputs["name"]
+            history["job_id"]=self.job.id
+            info=""
+            p =get_project(self.job.inputs["project_id"])
+            vs = ViewSet(p.db,p.get_viewset_id())
+            names=[]
+            for f in self.job.inputs["fields"]:
+                names.append(vs.fields[f]["label"])
+            info+="Fields: "+", ".join(names)
+            info+=" \nCluster Methods:"+", ".join(self.job.inputs["methods"])
+            info+=" \nDimensions: "+str(self.job.inputs["dimensions"]) 
+           
+            history["info"]=info
+            
+            
+                   
         def process(self):
             p=get_project(self.job.inputs["project_id"])
-            vs = ViewSet(p.db,p.get_viewset_id())
+           
             try:
                 name = self.job.inputs["name"]
                 dimensions = self.job.inputs.get("dimensions",2)
-                info = vs.cluster_by_fields(self.job.inputs["fields"],name,self.job.inputs["methods"],dimensions=dimensions)
+                data= p.cluster_by_fields(self.job.inputs["fields"],name,self.job.inputs["methods"],dimensions)
                 p.refresh_data()
-                for cols in info:
-                    p.data["graph_config"].append({
-                            "type":"wgl_scatter_plot",
-                            "title":name + " " + cols["method"],
-                            "param":[cols["fields"][0],cols["fields"][1]],
-                            "id":name+"_"+cols["method"],
-                            "axis":{
-                                "x_label":cols["labels"][0],
-                                "y_label":cols["labels"][1]
-                            },
-                            "location":{
-                                "x":0,
-                                "y":0,
-                                "height":2,
-                                "width":3
-                            }
-                        
-                        })
-                fields = self.job.inputs["fields"]
-                field_names=[]
-                for f in fields:
-                    field_names.append(vs.fields[f]["label"])
-                p.data["graph_config"].append({
-                    "type":"average_bar_chart",
-                    "title":name+" Fields",
-                    "param":fields,
-                    "labels":field_names,
-                    "id":name+"_fields",
-                    "location":{
-                        "x":0,
-                        "y":0,
-                        "height":2,
-                        "width":4
-                    }
-                })
-                p.data["cluster_by_fields_job_status"]="complete"
-                p.update()          
+                hid= self.get_input_parameter("history_id")
+                history=p.get_history(hid) 
+                history["tracks"]=[]
+                history["fields"]=data["fields"]
+                history["graphs"]=data["graphs"]
+                history["status"]="complete"   
+                p.update()
                 self.complete()
+                
             except Exception as e:
                 app.logger.exception("Cannot process ClusterByFieldsJob # {}".format(self.job.id))
-                p.set_data("cluster_by_fields_job_status","failed")
+                p.refresh_data()
+                hid= self.get_input_parameter("history_id")
+                history=p.get_history(hid)
+                history["status"]="failed"
+                p.update();
                 self.failed(traceback.format_exc())               
             
         
@@ -250,17 +296,43 @@ class FindTSSDistancesJob(LocalJob):
         else:   
             super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="find_tss_distances_job")
             
+            
+    def label_history(self,history):
+            self.set_input_parameter("history_id",history["id"])
+            history["label"] = "Add TSS Stats"
+            history["job_id"]=self.job.id
+            info = "Calculate distance from each TSS"  
+            go =  self.inputs.get("go_levels",0)
+            if go !=0:
+                info+="\nAdd GO of nearest gene"
+            history["info"]=info    
+            
     def process(self):
         try:
             p =get_project(self.job.inputs["project_id"])
             vs =ViewSet(p.db,p.get_viewset_id())
-            vs.add_ts_starts(overlap_column=True,go_levels=self.job.inputs.get("go_levels",0))
-            p.set_data("find_tss_distances_job_status","complete")
+            data= vs.add_ts_starts(overlap_column=True,go_levels=self.job.inputs.get("go_levels",0))
+            p.refresh_data()
+            p.data["graph_config"]+=data["graphs"]
+            hid= self.get_input_parameter("history_id")
+            history=p.get_history(hid) 
+            history["tracks"]=[]
+            history["fields"]=data["fields"]
+            history["graphs"]=[]
+            for g in data["graphs"]:
+                history["graphs"].append(g["id"])
+            history["status"]="complete"        
+            p.update()      
             self.complete()
+           
             
         except Exception as e:
             app.logger.exception("Cannot process AnnotationIntersectionJob # {}".format(self.job.id))
-            p.set_data("find_tss_distances_job_status","failed")
+            p.refresh_data()
+            hid= self.get_input_parameter("history_id")
+            history=p.get_history(hid)
+            history["status"]="failed"
+            p.update();
             self.failed(traceback.format_exc())
 
 class MLVImagesJob(LocalJob):
@@ -270,6 +342,14 @@ class MLVImagesJob(LocalJob):
         else:
             inputs["slow_queue"]=True
             super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="mlv_images_job")
+            
+            
+    def label_history(self,history):
+        self.set_input_parameter("history_id",history["id"])
+        history["label"] = "Create Images"
+        history["job_id"]=self.job.id
+        history["info"]="Creating Images for each location based on internal browser"
+        history["images"]=True
             
     def process(self):
         try:
@@ -283,19 +363,30 @@ class MLVImagesJob(LocalJob):
                                         margins=self.job.inputs.get("margins",0),
                                         job=self.job)
             
-          
+            p.refresh_data()
             p.set_data("has_images",True)
+            hid= self.get_input_parameter("history_id")
+            history=p.get_history(hid) 
+            history["tracks"]=[]
+            history["fields"]=[]
+            history["graphs"]=[]
+            history["status"]="complete"        
+            p.update()
             #send email
             url = p.get_url(external=True)
             user = db.session.query(User).filter_by(id=self.job.user_id).one()
             send_email(user,"Images Created","ucsc_image_job_finished",url=url) 
-            p.set_data("creating_images_job_status","complete") 
+            
             self.complete()
             
         except Exception as e:
             p= get_project(self.job.inputs["project_id"])
+            hid= self.get_input_parameter("history_id")
+            history=p.get_history(hid)
+            history["status"]="failed"
+            p.update();
             app.logger.exception("Error in creating mlv images # {}".format(self.job.id))
-            p.set_data("creating_images_job_status","failed") 
+            
             self.failed(traceback.format_exc())
     
                  
@@ -340,7 +431,8 @@ class CreateZegamiCollectionJob(LocalJob):
     def __init__(self,job=None,inputs=None,user_id=0,genome="other"):
         if (job):
             super().__init__(job=job)
-        else:   
+        else:
+            inputs["slow_queue"]=True   
             super().__init__(inputs=inputs,genome=genome,user_id=user_id,type="zegami_upload_job")
     
     #don't want to store the password 
@@ -378,15 +470,6 @@ class CreateZegamiCollectionJob(LocalJob):
             })
             self.failed(traceback.format_exc())
             
-            
-            
-
-        
-        
-        
-        
-         
-    
     
   
 job_types["annotation_intersection_job"]=AnnotationIntersectionJob

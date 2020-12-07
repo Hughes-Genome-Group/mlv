@@ -105,6 +105,7 @@ def runcelery(queue=None,threads=3):
     celery_args = ['celery', 'worker']
     if queue:
         celery_args.append('-Q%s'%queue)
+        celery_args.append('-n {}'.format(queue))
     celery_args.append('--concurrency=%s'% str(threads))
     celery_main(celery_args)
 
@@ -117,6 +118,7 @@ def remove_deleted_projects():
     res = databases['system'].execute_query(sql)
     for r in res:
         p=get_project(r['id'])
+        print(p.id)
         p.delete(True)
         
 

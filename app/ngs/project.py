@@ -4,7 +4,7 @@ import ujson,copy,shutil
 from os import name
 from app.databases.user_models import User
 from app.ngs.view import ViewSet,create_view_set_from_file,parse_extra_fields
-import datetime
+import datetime,shlex
 from sqlalchemy import text
 from app.zegami.zegamiupload import create_new_set,update_collection,delete_collection
 import os
@@ -102,6 +102,10 @@ def get_projects_summary(user_id=None,limit=5,offset=0,filters={},
     if filters.get("is_deleted"):
         sql+=" AND projects.is_deleted=True"
     
+    if filters.get("project_ids"):
+        sql+=" AND projects.id = ANY(%s)"
+        vars+=(filters.get("project_ids"),)
+    
     if project_type:
         if isinstance(project_type,list):
             sql+= " AND projects.type = ANY(%s)"
@@ -170,6 +174,8 @@ class GenericObject(object):
     def has_edit_permission(self,user):
         if not user.is_authenticated:
             return False
+        if not self.has_type_permission(user):
+            return False
         if user.id == self.owner or user.administrator:
             return True
         else:
@@ -229,6 +235,8 @@ class GenericObject(object):
             else:
                 self.update()
             del args["project_data"]
+        if meth_info.get("user_required"):
+            args["user"]=user
         if run_flag:
             self.set_data(run_flag[0],run_flag[1])  
         if meth_info.get("async") and app.config["USE_CELERY"]:
@@ -452,18 +460,58 @@ class GenericObject(object):
         self.data = results[0]['data']
         
     
-    def create_compound_column(self,field1="",field2="",operand="+",name=""):
+    def create_compound_column(self,stages=[],name="",final_trans="none",history={}):
         vs = ViewSet(self.db,self.get_viewset_id())
-        return vs.create_compound_column([field1,field2],operand,name)
+        data= vs.create_compound_column(name,stages,final_trans)
+        history["status"]="complete"
+        history["tracks"]=[]
+        f= data["columns"][0]["field"]
+        history["fields"]=[f]
+        history["id"]=f
+        history["graphs"]=[data["graphs"][0]["id"]]
+        self.add_to_history(history)
+        data["history"]=history
+        return data
     
     
     def delete_columns(self,columns=[]):
         vs = ViewSet(self.db,self.get_viewset_id())
-        for col in columns:
-            if not vs.fields.get(col):
-                raise Exception("{} column does not exist".format(col))
         vs.remove_columns(columns)
+        self.refresh_data()
+       
+        new_graphs=[]
+        for g in self.data["graph_config"]:
+            param= g.get("param")
+            
+            if param :
+                contains_field=False
+                if isinstance(param, list):
+                    for p in param:
+                        if p in columns:
+                            contains_field=True
+                            break
+                    else:
+                        if param in columns:
+                            contains_field=True
+                if contains_field:
+                    continue
+               
+            new_graphs.append(g)
+        if len(self.data["graph_config"]) != len(new_graphs):
+            self.data["graph_config"]=new_graphs
+            self.update()
+            
         
+        history=self.data.get("history")
+        if history:
+            new_history=[]
+            for h in history:
+                if h["id"] in columns:
+                    continue
+                new_history.append(h)
+            
+            self.set_data("history",new_history)
+        return self.data["history"]
     
     #need a subclass for the following
     def add_tagging_column(self):
@@ -535,16 +583,126 @@ class GenericObject(object):
     def get_viewset_id(self):
         return self.data.get("viewset_id")
     
-    def get_viewset(self,filters=None):
+    def get_viewset(self,filters=None,offset=None,limit=None):
+        
+       
         vs=ViewSet(self.db,self.get_viewset_id())
+        if (offset or offset==0) and limit:
+            off_lim=[int(offset),int(limit)]
+          
+            if offset==0:
+                
+                return {
+                    "views":vs.get_all_views(filters=filters,offset=off_lim),
+                    "field_information":vs.data["field_information"],
+                    "fields":vs.fields,
+                    "sprite_sheets":vs.data.get("sprite_sheets"),
+                    "annotation_information":vs.data.get("annotation_information"),
+                    "base_image_url":"/data/{}/view_sets/{}/thumbnails/tn".format(self.db,vs.id),
+                    "total":  vs.get_view_number()["count"]
+                }
+            else:
+                return vs.get_all_views(filters=filters,offset=off_lim)
+        
+                
+                
+                
+                
+        else:
+            return {
+                "views":vs.get_all_views(filters=filters),
+                "field_information":vs.data["field_information"],
+                "fields":vs.fields,
+                "sprite_sheets":vs.data.get("sprite_sheets"),
+                "annotation_information":vs.data.get("annotation_information"),
+                "base_image_url":"/data/{}/view_sets/{}/thumbnails/tn".format(self.db,vs.id)
+            }
+    
+    def add_intersections(self,ids,ec):
+        vs = ViewSet(self.db,self.get_viewset_id())
+       
+        if ec:
+            data= vs.add_annotation_fields(ids[0],ec)
+        else:
+            data= vs.add_annotations_intersect(ids)
+            
+        self.refresh_data()
+        self.data["graph_config"]+=data["graphs"]
+        self.data["browser_config"]["state"]+=data["tracks"]
+        self.update()
+        tracks=[]
+        graphs=[]
+        for t in data["tracks"]:
+            tracks.append(t["track_id"])
+        for g in data["graphs"]:
+            graphs.append(g["id"])
+            
         return {
-            "views":vs.get_all_views(filters=filters),
-            "field_information":vs.data["field_information"],
-            "fields":vs.fields,
-            "sprite_sheets":vs.data.get("sprite_sheets"),
-            "annotation_information":vs.data.get("annotation_information"),
-            "base_image_url":"/data/{}/view_sets/{}/thumbnails/tn".format(self.db,vs.id)
+            "graphs":graphs,
+            "tracks":tracks,
+            "fields":data["fields"]
+            
         }
+        
+        
+    def cluster_by_fields(self,fields,name,methods,dimensions):
+        vs = ViewSet(self.db,self.get_viewset_id())
+        info = vs.cluster_by_fields(fields,name,methods,dimensions)
+        self.refresh_data()
+        graphs=[]
+        fds=[]
+        for cols in info:
+            gid= cols["method"]+"_"+random_string(5)
+            self.data["graph_config"].append({
+                    "type":"wgl_scatter_plot",
+                    "title":name + " " + cols["method"],
+                    "param":[cols["fields"][0],cols["fields"][1]],
+                    "id":gid,
+                    "axis":{
+                        "x_label":cols["labels"][0],
+                        "y_label":cols["labels"][1]
+                    },
+                    "location":{
+                        "x":0,
+                        "y":0,
+                        "height":4,
+                        "width":6
+                    }
+                
+            })
+            graphs.append(gid)
+            for f in cols["fields"]:
+                fds.append(f)
+                
+        field_names=[]
+        for f in fields:
+            field_names.append(vs.fields[f]["label"])
+        
+        gid= "abc_"+random_string(5)
+        graphs.append(gid)
+        self.data["graph_config"].append({
+            "type":"average_bar_chart",
+            "title":name+" Fields",
+            "param":fields,
+            "labels":field_names,
+            "id":gid,
+            "location":{
+                "x":0,
+                "y":0,
+                "height":2,
+                "width":4
+            }
+        })
+     
+        self.update()
+        return {
+            "graphs":graphs,
+            "tarcks":[],
+            "fields":fds
+            
+        }          
+        
+        
     
     def add_annotation_intersections(self,ids=[],extra_columns=None):
         from app.jobs.jobs import AnnotationIntersectionJob
@@ -563,6 +721,44 @@ class GenericObject(object):
         self.set_data("find_tss_distances_job_status","running")
         j.send()
         return j.job.id
+    
+    
+    def add_remove_item(self,item={},type="graph",action="add",history=None):     
+        self.refresh_data()
+        store = self.data["graph_config"]
+        id_name="id"
+        if type =="track":
+            store=self.data["browser_config"]["state"]
+            id_name="track_id"
+       
+        if action=="add":
+            store.append(item)
+            self.update()
+            if history:
+                self.add_to_history(history)              
+        else:
+            index =-1
+            for i,graph in enumerate(store):
+                if item[id_name]==graph[id_name]:
+                    index=i
+                    break
+            if index !=-1:
+                del store[index]
+            if history:
+                index=-1
+                for i,hi in enumerate(self.data["history"]):
+                     if hi["id"]==history:
+                        index=i
+                        break
+                if index != -1:   
+                    del self.data["history"][index]
+                
+            self.update()
+        
+                     
+    
+    
+
     
     def get_fields(self):
         vsid=self.get_viewset_id()
@@ -596,7 +792,6 @@ class GenericObject(object):
         del self.data["find_tss_distances_job_status"]
         self.update()
         
-        
     
     def get_tss_distances(self):
         vs = ViewSet(self.db,self.get_viewset_id())
@@ -617,12 +812,17 @@ class GenericObject(object):
             
             
             
-            
+    def remove_items(self,ids=[]):
+        vs = ViewSet(self.db,self.get_viewset_id())
+        vs.remove_items(ids)
+        self.create_anno_bed_file(force=True)
+       
+        
         
                
-    def create_anno_bed_file(self):
+    def create_anno_bed_file(self,force=False):
         vs = ViewSet(self.db,self.get_viewset_id())
-        vbf = vs.get_bed_file()
+        vbf = vs.get_bed_file(force)
         pbf = os.path.join(self.get_tracks_folder(),"anno_{}.bed.gz".format(self.id))
         copyfile(vbf,pbf)
         copyfile(vbf+".tbi",pbf+".tbi")
@@ -719,12 +919,15 @@ class GenericObject(object):
         folder = os.path.join(app.config['TRACKS_FOLDER'],"projects",str(self.id))
         if not os.path.exists(folder):
             os.makedirs(folder)
-        local_file = os.path.join(folder,file_name)                 
+        local_file = os.path.join(folder,file_name)
+        url = shlex.quote(url)                 
         command = "curl {} -o {}".format(url,local_file)
         os.system(command)
+        self.refresh_data()
+        tid= random_string(5)
         self.data["browser_config"]["state"].append({
                 "url":local_file.replace("/data",""),
-                "track_id":name,
+                "track_id":tid,
                 "discrete":True,
                 "height":100,
                 "color":"#808080",
@@ -736,7 +939,139 @@ class GenericObject(object):
         })
         self.update()
         vs =ViewSet(self.db,self.get_viewset_id())
-        vs.add_wig_stats(local_file,name)
+        fields= vs.add_wig_stats(local_file,name)
+        
+        return {
+            "fields":fields,
+            "track":tid
+        }
+    
+    def add_to_history(self,info):
+        self.refresh_data()
+        h= self.data.get("history",[])
+        if not info.get("id"):
+            hid= random_string(5)  
+            info["id"]= hid
+        h.append(info)
+        self.set_data("history",h)
+        return info["id"]
+        
+     
+    def get_history(self,hid):
+        for h in self.data["history"]:
+            if h["id"]==hid:
+                return h
+     
+    def delete_history_item(self,history_id=""):
+        h= self.get_history(history_id)
+        if h.get("tracks") and len(h.get("tracks"))>0:
+            new_tracks=[]
+            for t in self.data["browser_config"]["state"]:
+                if t["track_id"] not in h["tracks"]:
+                    new_tracks.append(t) 
+            self.data["browser_config"]["state"]=new_tracks
+        if h.get("graphs"):
+            new_graphs=[]
+            for g in self.data["graph_config"]:
+                if g["id"] not in h["graphs"]:
+                    new_graphs.append(g)
+            self.data["graph_config"]=new_graphs
+        self.update()
+        if h.get("fields") and len(h.get("fields"))>0:
+             self.delete_columns(h.get("fields"))
+        index=-1
+        self.refresh_data() 
+        for i,hi in enumerate(self.data["history"]):
+            if hi["id"]==history_id:
+                index=i
+                break
+        del self.data["history"][index]
+        self.update()
+        
+      
+    def get_bw_stats_data(self,job_id=0):
+        from app.jobs.jobs import get_job
+        j=get_job(job_id)
+        wig_names=j.get_input_parameter("wig_names")
+        vs= ViewSet(self.db,self.get_viewset_id())
+        data=vs.get_wig_stats_data(wig_names)
+        wig_files=[]
+        for track in self.data["browser_config"]["state"]:
+            if track['track_id'] in wig_names:
+                wig_files.append(track)
+        data["tracks"]=wig_files
+        return data
+    
+    
+    def get_cluster_data(self,job_id=0):
+        from app.jobs.jobs import get_job
+        j=get_job(job_id)
+        name=j.get_input_parameter("name")
+        methods=j.get_input_parameter("methods")
+        vs= ViewSet(self.db,self.get_viewset_id())
+        data=vs.get_cluster_data(name,methods)
+        graph_ids=[]
+        graphs=[]
+        field_graph= name+"_fields"
+        for method in methods:
+            graph_ids.append(name+"_"+method)
+        for graph in self.data["graph_config"]:
+            if graph['id'] in graph_ids:
+                graphs.append(graph)
+            if graph["id"]==field_graph:
+                graphs.append(graph)
+        data["graphs"]=graphs
+        return data
+        
+     
+     
+    def initiate_job(self,job=None,inputs={}):   
+        from app.jobs.jobs import job_types
+        j_class= job_types[job]
+        inputs["project_id"]=self.id
+        j= j_class(genome=self.db,user_id=self.owner,inputs=inputs)
+        history={"status":"running"}
+        self.add_to_history(history)
+        j.label_history(history)
+        self.update()
+        j.send()
+        return history
+    
+    
+    def check_job_finished(self,job_id=0,user=None):
+        from app.jobs.jobs import get_job
+        j= get_job(job_id)
+        history = self.get_history(j.get_output_parameter("history_id"))
+        if j.has_permission(user):
+            status = j.check_status()
+            if status=="complete":
+                history = self.get_history(j.get_output_parameter("history_id"))
+                vs= ViewSet(self.db,self.get_viewset_id())
+                c_d={"data":[],"columns":[]}
+                if len(history["fields"])>0:
+                    c_d = vs.get_columns_and_data(history["fields"])
+                graphs=[]
+                tracks=[]
+                for g in self.data["graph_config"]:
+                    if g["id"] in history["graphs"]:
+                        graphs.append(g)
+                for t in self.data["browser_config"]["state"]:
+                    if t["track_id"] in history["tracks"]:
+                        tracks.append(t)
+                    
+                return {
+                    "status":"complete",
+                    "columns":c_d["columns"],
+                    "data":c_d["data"],
+                    "tracks":tracks,
+                    "graphs":graphs,
+                    "history":history
+                    
+                }   
+                
+            else:
+                return {"status":status,"history":history}
+            
         
     def send_peak_stats_job(self,wig_locations=[],wig_names=[]):
         from app.jobs.jobs import PeakStatsJob
@@ -774,7 +1109,21 @@ class GenericObject(object):
     
         
         
-        
+GenericObject.methods={
+    "add_remove_item":{   
+        "permission":"edit"   
+    },
+    "initiate_job":{   
+        "permission":"edit"   
+    },
+    "check_job_finished":{   
+        "permission":"edit",
+        "user_required":True 
+    },
+    "delete_history_item":{
+        "permission":"edit"
+    }
+}      
       
        
 def get_project(id):
@@ -798,10 +1147,10 @@ def get_projects(ids):
     sql = "SELECT * FROM projects WHERE id=ANY(%s)"
     results=databases["system"].execute_query(sql,(ids,))
     
-    projects=[]
+    projs=[]
     for res in results:
-        projects.append(projects[res["type"]](res))
-    return projects
+        projs.append(projects[res["type"]](res=res))
+    return projs
 
 def get_main_project_types():
     projs=[]

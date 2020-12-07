@@ -8,7 +8,7 @@
 	        "is_public":true,
 	        "main_project":true,
 	        "enter_genome":true,
-	        "description":"Upload bed like file of genomic locations and metadata. Allows sorting and filtering and visualization of the data."  
+	        "description":"Upload a bed like file of genomic locations and metadata. Allows sorting, filtering and visualization of the data."  
     
 		},
 		{

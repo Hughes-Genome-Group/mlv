@@ -1,0 +1,46 @@
+{% extends "common/page_base.html" %}
+{% block stylesheets %}
+    {{super() }}
+    <!-- extra styles -->
+     <link href="/multi_experiment_view/static/data_view.css?version={{config['JS_VERSION']}}" rel="stylesheet">
+     <link rel="stylesheet" href="{{ url_for('static' , filename='css/main/split.css') }}" />
+
+{% endblock %}
+
+
+{% block outercontent %}
+	<div id="exp-holder"></div>
+
+    <!-- main content -->
+{% endblock %}
+
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/main/split.min.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/dataview/ciview.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/tracks/MLVPanel_custom.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/tables/project_chooser_dialog.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/dialogs/mlv_controls.js')}}?version={{config['JS_VERSION']}}"></script> 
+	<script src="/multi_experiment_view/static/mev_dialogs.js?version={{config['JS_VERSION']}}"></script>
+	<script src="/multi_experiment_view/static/gene_chooser_dialog.js?version={{config['JS_VERSION']}}"></script>
+	<script src="{{ url_for('static', filename='js/mlv/pages/genome_home_page.js')}}?version={{config['JS_VERSION']}}"></script>
+	<script>
+		var project_id={{project_id}}
+	    window.addEventListener("load",function(){
+	    	fetch("/meths/get_project_data/"+project_id)
+	    	.then(response=>response.json())
+	    	.then(results=>{
+	    		if (results.data.group_id){
+	    			new MEVGroupViewer(results,"exp-holder");
+	    		}
+	    		else{
+	    			new MEVGroupChooser(results,"exp-holder")
+	    		}
+	    	});
+	    });
+	    	
+	    	
+	</script>
+    	
+{% endblock %}

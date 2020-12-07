@@ -8,6 +8,9 @@ class JobsAdminPanel{
     }
 
     displayJobInfo(job_id){
+    	if (my_jobs){
+    		return;
+    	}
         let self = this;
         $.ajax({
             url:"/meths/jobs/get_job_info/"+job_id,

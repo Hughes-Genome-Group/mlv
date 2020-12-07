@@ -1,8 +1,8 @@
 from . import main
-from flask import Blueprint, redirect, render_template,request,safe_join,send_from_directory,request,Response
+from flask import Blueprint, redirect, render_template,request,safe_join,send_from_directory,request,Response,send_file
 from flask import request, url_for,flash
 from flask_user import current_user, login_required, roles_accepted
-from app import db,app,databases
+from app import db,app,databases,module_methods
 from app.databases.user_models import UserProfileForm,User
 from app.decorators import admin_required,permission_required,logged_in_required
 from app.ngs.project import GenericObject,get_project,get_main_project_types
@@ -15,10 +15,15 @@ import ujson,sys,re,mimetypes
 #***********GENERAL PAGES**********************
 @main.route('/')
 def home_page():
-
     return render_template(app.config["HOME_PAGE"])
 
-@main.route("projects/<project_type>/home")
+
+@main.route("/manage_projects")
+def manage_projects():
+    return render_template("projects/manage_projects.html")
+    
+
+@main.route("/projects/<project_type>/home")
 def project_home_page(project_type):
     not_allow_other = app.config["MLV_PROJECTS"][project_type].get("not_allow_other")
         
@@ -26,10 +31,25 @@ def project_home_page(project_type):
     return render_template("{}/home.html".format(project_type),
                            project_type=project_type,
                            genomes=get_genomes(not_allow_other))
+    
+
+@main.route("/modules/<module>/home")    
+def module_home_page(module):
+    if not app.config["MODULE_INFO"][module]["is_public"]:
+        if not current_user.is_authenticated or not current_user.has_permission("view_module",module):
+            return refuse_permission()
+    data=None
+    meth = module_methods.get(module)
+    if meth:
+        data=meth(current_user)
+    return render_template("{}.html".format(module),**data)
+            
+    
+    
 
 
 #********************************************************************
-#***The follwoinf should be overiddeb by directives in the webserver
+#***The following should be overidden by directives in the webserver
 #*********************************************************************
 
 '''calls to static module files are rerouted
@@ -38,30 +58,30 @@ e.g with nginx:-
 location ~  /(.*)/static/(.*) {
     alias /<app_root>/modules/$1/static/$2;
 }'''
-@main.route("<project>/static/<path:path>")
+@main.route("/<project>/static/<path:path>")
 def test_url(project,path):
    f= safe_join("modules",project,"static",path)
    return send_from_directory(app.root_path,f)
 
 
-@main.route("data/temp/<path:path>")
+@main.route("/data/temp/<path:path>")
 def temp_url(path):
     return send_from_directory(app.config["TEMP_FOLDER"],path)
    
-@main.route("data/<path:path>")
+@main.route("/data/<path:path>")
 def image_route(path):
     if path.endswith(".png"):
         return send_from_directory(app.config["DATA_FOLDER"],path)
 
-@main.route("tracks/<path:path>")
+@main.route("/tracks/<path:path>")
 def send_track(path):
     file_name =safe_join(app.config["TRACKS_FOLDER"],path)
     range_header = request.headers.get('Range', None)
-    file =open(file_name,"rb")
-    if not range_header:
-        return send_file(file)
     
-
+    if not range_header:
+        return send_file(file_name)
+    
+    file =open(file_name,"rb")
     size = sys.getsizeof(file)
     byte1, byte2 = 0, None
 
@@ -89,9 +109,9 @@ def send_track(path):
     file.close()
     return rv
 
-
+#*********************************************************************
     
-@main.route("projects/<type>/<int:project_id>")
+@main.route("/projects/<type>/<int:project_id>")
 def project_page(type,project_id):
     p = get_project(project_id)
     if not  p.has_view_permission(current_user):
@@ -106,7 +126,7 @@ def project_page(type,project_id):
     all_args.update(args)
     return render_template(template,**all_args)
    
-@main.route("projects")
+@main.route("/projects")
 def projects():
     return render_template("projects/projects.html")
 
@@ -115,26 +135,26 @@ def projects():
 #***********JOBS*************************
 
 
-@main.route("jobs/jobs_panel")
+@main.route("/jobs/jobs_panel")
 @admin_required
 def jobs_panel():
     return render_template('admin/view_jobs.html')
 
 
-@main.route("admin/users_panel")
+@main.route("/admin/users_panel")
 @admin_required
 def users_panel():
     return render_template('admin/view_users.html')
 
 
-@main.route("jobs/my_jobs")
+@main.route("/jobs/my_jobs")
 @logged_in_required
 def my_jobs():
     return render_template('admin/view_jobs.html',my_jobs=True)
 
 
 
-@main.route("general/get_info")
+@main.route("/general/get_info")
 def get_general_info():
     return ujson.dumps({
          "genomes":get_genomes(),
@@ -142,7 +162,7 @@ def get_general_info():
     })
    
    
-@main.route("general/get_jobs_projects")
+@main.route("/general/get_jobs_projects")
 @logged_in_required
 def get_jobs_projects():
     sql = "SELECT COUNT(status) FILTER(WHERE status='failed') AS failed, COUNT(status) FILTER(WHERE status<>'failed') AS running FROM jobs WHERE user_id={} AND status <> 'complete'".format(current_user.id)
@@ -151,7 +171,7 @@ def get_jobs_projects():
     projects=databases['system'].execute_query(sql,(app.config["MLV_MAIN_PROJECTS"],))[0]['num']
     return ujson.dumps({"projects":projects,"jobs":{"running":job_info['running'],"failed":job_info['failed']}})
     
-@main.route("browser_view/<int:project_id>/<int:view_id>")
+@main.route("/browser_view/<int:project_id>/<int:view_id>")
 @cross_origin()
 def browser_view(project_id,view_id):
     return render_template("pages/genome_browser.html",project_id=project_id,view_id=view_id)

@@ -1,6 +1,7 @@
 from app import databases,app
 from app.ngs.gene import create_gene_set_from_remote_file,GeneSet
 import os,requests,ujson
+from datetime import date
 
 def get_genomes(not_other=False):
     sql = "SELECT name,label FROM genomes"
@@ -37,8 +38,10 @@ def create_genome(name,label,database="",icon=None,connections=5):
         local_chrom_file = os.path.join(genome_dir,"custom.chrom.sizes".format(name))
         os.system("wget -O {} {}".format(local_chrom_file,remote_chrom_file))
         gene_file="http://hgdownload.soe.ucsc.edu/goldenPath/{}/database/refGene.txt.gz".format(name)
-        create_gene_set_from_remote_file(name,gene_file,"UCSC RefGene",make_default=True)
+        desc = "Obtained from UCSC refGene on {}".format(date.today().strftime("%m-%d-%y"))
+        create_gene_set_from_remote_file(name,gene_file,"UCSC RefGene",make_default=True,desecription=desc)
         gs = GeneSet(name)
+        
         gs.create_ts_file()
     
 

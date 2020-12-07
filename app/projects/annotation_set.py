@@ -31,6 +31,7 @@ class AnnotationSet(GenericObject):
             else:
                 new_fields.append({"datatype":info["datatype"],
                                    "position":count,
+                                   "field":"f{}".format(count),
                                    "name":info["label"]})
                 
         bed  = vs.create_basic_bed_file(without_ids=True,selected_ids=ids,
@@ -55,7 +56,7 @@ class AnnotationSet(GenericObject):
                     handle = gzip.open(f,"rt")
                 else:
                     handle=open(f)
-                
+                lookup = app.config["GENOME_DATABASES"][self.db].get("ens_to_ucsc")
                 with handle as csvfile:
                     reader=csv.reader(csvfile,delimiter=delimiter)
                 
@@ -63,6 +64,8 @@ class AnnotationSet(GenericObject):
                         if reader.line_num==1 and has_headers:
                             continue                  
                         out_arr=row[0:3]
+                        if lookup:
+                            out_arr[0]=lookup.get(out_arr[0],out_arr[0])
                         if len(fields)>3:
                             for field in fields[3:]:
                                 out_arr.append(row[field["position"]-1])

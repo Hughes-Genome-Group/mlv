@@ -10,7 +10,7 @@ function initializePage(){
 		response.data.permission = response.permission;
 		if (!response.data.viewset_id){
 			if (response.data.uploading_file){
-				waiting_icon = new WaitingDialog("Uploading And Proecessing File");
+				waiting_icon = new WaitingDialog("Uploading And Processing File");
 				waiting_icon.wait("Processing File");
 				checkUploading();
 				return;
@@ -29,6 +29,19 @@ function initializePage(){
 					}
 			mlv_file_upload = new MLVFileUploadDialog(config);
 			mlv_file_upload.setUploadCallback(uploadViewSet);
+			let d= $("<div>").attr({"class":"alert alert-info","id":"upload-info"})
+			      .css({"margin-left":"auto","margin-right":"auto","width":"50%"})
+			      .html(`<b>Please upload a file containing infomation about your genomic regions of interest</b><br>
+			            <ul>
+			      		<li>The file can either be a tab(.tsv) or comma(.csv) delmited text file and can also be gzipped (.gz)</li>
+                        <li>The only requirement is that the first three columns (in order) specify the genomic location i.e. chromosome, start and finish </li>
+                        <li>Normal bed files as well as excel data that has been saved as a .csv or .tsv file cab be used </li>
+                        <li>There can be as many other columns as you like and column headers are not essential as column names can be added </li>
+                        <li>Chromosome names need to be either UCSC (chr1,chr2,chrX) or Ensemble (1,2,X) format </li>
+                        <li>Other file formats e.g. BigWig, Bam, BigBed etc can be added later </li>
+ 
+`)
+			$("#split-container").append(d)
 			
 		}
 		else{
@@ -39,6 +52,7 @@ function initializePage(){
 }
 
 function loadMLVView(project){
+	$("#upload-info").remove();
 	new MLViewBase("split-container",
 			project,
 			{
@@ -85,7 +99,7 @@ function uploadViewSet(file,fields,has_headers,delimiter){
 				delimiter:delimiter
 			}
 	}
-	waiting_icon= new WaitingDialog("Uploading And Proecessing File");
+	waiting_icon= new WaitingDialog("Uploading And Processing File");
 	waiting_icon.wait("Uploading File");
 	mlvUploadFile(file,url,data,function(response){		
     	checkUploading();	

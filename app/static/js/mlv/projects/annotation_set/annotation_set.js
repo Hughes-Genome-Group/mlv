@@ -61,13 +61,14 @@ class UploadAnnotationSet{
 			}
 		}
 		let mlv_file_upload = new MLVFileUploadDialog(config);
-		mlv_file_upload.setUploadCallback(function(file,fields,has_headers){
+		mlv_file_upload.setUploadCallback(function(file,fields,has_headers,delimiter){
 			let url = "/meths/execute_project_action/"+project_id;
 			let data = {
 					method:"create_from_file",
 					arguments:{
 						fields:fields,
-						has_headers:has_headers
+						has_headers:has_headers,
+						delimiter:delimiter
 					}
 			}
 			self.waiting_dialog = new WaitingDialog("Creating Annotation Set");

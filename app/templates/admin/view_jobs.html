@@ -32,6 +32,7 @@
 	<script>
 		var my_jobs= "{{my_jobs}}"
 		$(function(){
+			
 	    	Split(['#left-panel', '#mlv-table'], {
 	    		sizes: [40, 60],
 	    		direction:"horizontal",
@@ -39,12 +40,17 @@
 	    		onDragEnd:function(){$(window).trigger("resize")}
 			});
 	    	
-	 		Split(['#filter-panel', '#json-view'], {
-	    		sizes: [30, 70],
-	    		direction:"vertical",
-	    		gutterSize:5,
-	    		onDragEnd:function(){$(window).trigger("resize")}
-			});
+	    	if (my_jobs==="True"){
+				$("#json-view").remove();
+			}
+	    	else{
+		 		Split(['#filter-panel', '#json-view'], {
+		    		sizes: [30, 70],
+		    		direction:"vertical",
+		    		gutterSize:5,
+		    		onDragEnd:function(){$(window).trigger("resize")}
+				});
+	    	}
 	 		
 			new JobsAdminPanel("mlv-table","filter-panel","json-view",my_jobs);
 			

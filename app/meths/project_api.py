@@ -22,7 +22,12 @@ def get_project_data(id):
     perm = p.get_permissions(current_user)
     if not perm:
          return ujson.dumps({"success":False,"msg":"You do not have permission"})
-
+    gd = app.config["GENOME_DATABASES"][p.db]
+    genome_info={
+        "label":gd["label"],
+        "build":p.db,
+        "gene_description":gd["gene_description"]
+    }
     return ujson.dumps({
         "name":p.name,
         "type":p.type,
@@ -31,7 +36,8 @@ def get_project_data(id):
         "data":p.get_data(),
         "permission":perm,
         "status":p.status,
-        "id":p.id
+        "id":p.id,
+        "genome_info":genome_info
     })
  
 @meths.route("/get_project_fields/<int:id>")
@@ -48,6 +54,7 @@ def get_project_fields(id):
 @meths.route("/execute_project_action/<int:project_id>",methods=["POST"])
 def execute_project_action(project_id):
     try:
+        p = get_project(project_id)
         data=request.json
         if data:
             arguments= data.get("args",{})
@@ -57,13 +64,17 @@ def execute_project_action(project_id):
             data = ujson.loads(request.form.get("data"))
            
             method=data.get("method")
-            arguments=data.get("arguments",{})
-            arguments["files"]={}
-            for fid in request.files:
-                f = request.files[fid]
-                filepath = save_file(f)
-                arguments["files"][fid]=filepath    
-        p = get_project(project_id)
+            meth_info = p.methods.get(method)
+            if meth_info and p.has_edit_permission(current_user):
+            #need edit permission to upload file
+                arguments=data.get("arguments",{})
+                arguments["files"]={}
+                for fid in request.files:
+                    f = request.files[fid]
+                    filepath = save_file(f)
+                    arguments["files"][fid]=filepath    
+            else:
+                raise Exception("No permission to upload file")
         return ujson.dumps(p.execute_action(method,current_user,arguments))
     except Exception as e:
         return ujson.dumps({"msg":"Cannot execute action","success":False})
