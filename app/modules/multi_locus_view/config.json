@@ -1,28 +1,14 @@
 {
 	"projects":[
 		{
-			"name":"multi_locus_view",
+		"name":"multi_locus_view",
 	        "label":"Multi Locus View",
 	        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
 	        "can_create":true,
 	        "is_public":true,
 	        "main_project":true,
 	        "enter_genome":true,
-	        "description":"Upload a bed like file of genomic locations and metadata. Allows sorting, filtering and visualization of the data."  
-    
-		},
-		{
-			"name":"sc_atac_seq",
-	        "label":"scATAC-seq",
-	        "large_icon":"/multi_locus_view/static/img/multi_locus_view.png",
-	        "can_create":true,
-	        "is_public":false,
-	        "main_project":true,
-	        "enter_genome":true,
-	        "description":"scATAC-seq."  
-    
-		}
-		
-	
-	]
+     
+	        }
+        ]
 }

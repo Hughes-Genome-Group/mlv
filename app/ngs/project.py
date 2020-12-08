@@ -832,7 +832,8 @@ class GenericObject(object):
     def create_subset_from_parent(self,ids=[],parent_id=None):
         try:
             p = get_project(parent_id)
-            user= db.session.query(User).filter_by(id=self.owner).one()
+            
+            user=db.session.query(User).filter_by(id=self.owner).one()
             if not p.has_view_permission(user):
                 raise Exception("User does not have permission on parent to create subset")
             #copy data
@@ -1122,7 +1123,34 @@ GenericObject.methods={
     },
     "delete_history_item":{
         "permission":"edit"
+    },
+    "create_subset_from_parent":{
+        "permission":"edit",
+        "running_flag":["creating_subset",True],
+        "async":True
+    },
+    "get_viewset":{
+        "permission":"view"
+    },
+    "update_tags":{
+        "permission":"edit"
+    },
+    "make_ucsc_images":{
+        "permission":"edit",
+        "permission_required":"ucsc_create_images"
+    },
+    "upload_zegami_collection":{
+        "permission":"edit"
+    },
+      "create_compound_column":{
+        "permission":"edit"
+    },
+    "delete_columns":{
+        "permission":"edit"
     }
+    
+    
+    
 }      
       
        

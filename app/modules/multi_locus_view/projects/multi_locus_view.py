@@ -97,62 +97,21 @@ class MultiLocusView(GenericObject):
             delete_job(info["job_id"])
                
         super().delete(True)
-    
+
+
+
+       
 MultiLocusView.methods={
     "upload_file":{
         "permission":"edit",
         "running_flag":["uploading_file",True],
         "async":True
-    },
-    "get_viewset":{
-        "permission":"view"
-    },
-    "add_annotation_intersections":{
-        "permission":"edit"
-    },
-    "remove_annotation_intersections":{
-        "permission":"edit"
-    },
-    "get_annotation_intersections":{
-        "permission":"view"
-    },
-    "make_ucsc_images":{
-        "permission":"edit",
-        "permission_required":"ucsc_create_images"
-    },
-    "upload_zegami_collection":{
-        "permission":"edit"
-    },
-    "create_compound_column":{
-        "permission":"edit"
-    },
-    "delete_columns":{
-        "permission":"edit"
-    },
-    "make_mlv_images":{
-        "permission":"edit"
-    },
-    "create_subset_from_parent":{
-        "permission":"edit",
-        "running_flag":["creating_subset",True],
-        "async":True
-    },
-    "update_tags":{
-        "permission":"edit"
-    },
-        "find_tss_distances":{
-        "permission":"edit"
-    },
-    "get_tss_distances":{
-        "permission":"edit"
-    },
-    "send_peak_stats_job":{
-        "permission":"edit"
-    },
-    "send_cluster_by_fields_job":{
-        "permission":"edit"
     }
 }
+
+
+for meth in GenericObject.methods:
+    MultiLocusView.methods[meth]=GenericObject.methods[meth]
 
 
 projects["multi_locus_view"]=MultiLocusView
