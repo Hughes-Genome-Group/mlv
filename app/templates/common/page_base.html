@@ -67,15 +67,19 @@
                     <i class="icon-align-justify"></i>
                 </a>-->
                 <!-- LOGO SECTION -->
+               
                 <div class="navbar-header">
 
                     <a href="/" class="navbar-brand">
                     <img src="{{config['APPLICATION_LOGO']}}" />
+                     {% if not config['HIDE_APPLICATION_NAME'] %} 
                        <span class="navbar-header h4">{{config['APPLICATION_NAME']}}</span>
+                        {% endif %}
                        </a>
              
                    
                 </div>
+               
                 <div class=" collapse navbar-collapse" id="main-navbar">
              {% if project_type %} 
           

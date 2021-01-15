@@ -851,6 +851,7 @@ class GenericObject(object):
             self.set_data("creating_subset",False)
         except Exception as e:
             app.logger.exception("Creating subset #{} from parent#{}".format(self.id,parent_id))
+            self.set_data("creating_subset",False)
             self.set_data("subset_creation_failed",True)
         
     

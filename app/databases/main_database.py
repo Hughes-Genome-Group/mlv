@@ -401,8 +401,9 @@ class Database(object):
     
         
     
-    def execute_insert(self,sql,vars=None):
-        sql+=" RETURNING id"
+    def execute_insert(self,sql,vars=None,ret_id=True):
+        if ret_id:
+            sql+=" RETURNING id"
         conn=self.get_connection()
         new_id=-1
         
@@ -410,7 +411,8 @@ class Database(object):
             cursor = conn.cursor()
             cursor.execute(sql,vars)
             conn.commit()
-            new_id = cursor.fetchone()[0]
+            if ret_id:
+                new_id = cursor.fetchone()[0]
             self.pool.putconn(conn)
            
         except Exception as e:  

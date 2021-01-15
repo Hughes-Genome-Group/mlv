@@ -698,7 +698,7 @@ class MLViewBase{
     		this.setupAnnoContextMenu(this.permission);
     		
     	}
-    	if (project_data.find_tss_distances_job_status !== "complete" && this.config.find_tss_distances!==false){
+    	if (this.permission === "edit"){
 	    	$("<i class='fas fa-exchange-alt'></i>")
 			.css("font-size","18px")
 			.attr({title:"Find TSS Distances","data-toggle":"tooltip"})
@@ -888,26 +888,17 @@ class MLViewBase{
     	
     	this.waiting_icon.hide();
     	
+    
+    	
+    	this.table = new MLVTable("the-table-div",table_columns,dv);
     	if (project_data.table_config){
-    		let ci = project_data.table_config.col_info;
-    		if (ci){
-    			for (let c of table_columns){
-    				if (ci[c.field]){
-    					c.order=ci[c.field].order;
-    					c.width=ci[c.field].width
-    				}
-    				else{
-    					c.order=1000;
-    				}
-    			}
-    			table_columns.sort(function(a,b){
-    				return a.order-b.order;
-    			})
+    		let cl = project_data.table_config.column_layout;
+    		if (cl){
+    			this.table.setColumnLayout(cl);
     		}
     		
     	}
     	
-    	this.table = new MLVTable("the-table-div",table_columns,dv);
     	if (project_data.has_images){
     		this.image_table = new MLVImageTable(this.im_table_div,dv,
     				{
@@ -1466,7 +1457,7 @@ class MLViewBase{
 		let table_config={
 				format:this.table_mode,
 				sort_cols:this.table.getSortColumns(),
-				col_info:this.table.getColumnInfo()
+				column_layout:this.table.getColumnLayout()
 				
 				
 		}

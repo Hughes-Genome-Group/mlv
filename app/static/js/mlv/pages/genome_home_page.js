@@ -303,15 +303,22 @@ class ProjectCreatePanel{
             dataType:"json"
         })
         .done(data=>{
-        	this._init(data);	
+        	this._init(data,div_id);	
         });	
 		
 	}
 	
-	_init(data){
+	_init(data, div_id){
+		let advanced=false;
 		for (let p_name in data.projects){
 			let proj= data.projects[p_name];
+			
 			let card = $("<div  class='card card-mlv card-project'>");
+			if (proj.advanced){
+				card.addClass("project-advanced");
+				card.css("display","none");
+				advanced=true;
+			}
 			
 			card.append("<img class='img-fluid' style='opacity:0.4' src='"+proj.large_icon+"'>");
 			card.append("<div class='card-img-overlay'>"+proj.label+"</div>");
@@ -328,8 +335,19 @@ class ProjectCreatePanel{
 			})
 		
 			card.appendTo(this.card_deck);
+		
+			
 			
 		}
+		if (advanced){
+			
+			$("<button>").text("Include Advanced Types").attr("class","btn btn-secondary btn-sm").click(function(){
+				$(".project-advanced").show();
+				$(this).hide();
+			})
+			.appendTo("#advanced-button-div");
+		}
+		
 	}
 	
 	

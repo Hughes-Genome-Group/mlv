@@ -55,7 +55,7 @@ DATA_FOLDER="/data/mlv/"
 TEMP_FOLDER="/data/mlv/temp"
 TRACKS_FOLDER="/data/tracks"
 
-JS_VERSION="5.185"
+JS_VERSION="5.188"
 
 
 #email settings
