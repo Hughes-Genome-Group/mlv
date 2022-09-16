@@ -34,7 +34,7 @@ joblib==0.14.1
 kiwisolver==1.1.0
 kombu==4.2.1
 llvmlite==0.30.0
-Mako==1.0.7
+Mako==1.2.2
 MarkupSafe==1.1.1
 matplotlib==3.0.3
 moviepy==1.0.0
